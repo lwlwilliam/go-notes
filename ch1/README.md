@@ -2,6 +2,8 @@
 
 > Hello, world!
 
+**helloworld.go**
+
 ```
 package main
 
@@ -40,6 +42,8 @@ Go 语言在代码格式上采取了很强硬的态度。`gofmt`工具把代码�
 
 下面是 Unix 里 echo 命令的一份实现，echo 把它的命令行参数打印成一行。程导入了两个包，用括号把它们括起来写成列表形式，而没有分开写成独立的 
 import 声明。两种形式都合法，列表形式习惯上用得多。包导入顺序并不重要；gofmt 工具格式化时按照字母顺序对包名排序。
+
+**echo1.go**
 
 ```
 // Echo1 prints its command-line arguments.
@@ -100,6 +104,8 @@ for {
 
 for 循环的另一种形式，在某种数据类型的区间(range)上遍历，如字符串或切片。
 
+**echo2.go**
+
 ```
 // Echo2 prints its command-line arguments
 package main
@@ -144,6 +150,8 @@ var s string = ""
 
 如果连接涉及的数据量很大，这种方式代价高昂。一种简单且高效的解决方案是使用 strings 包的 Join 函数：
 
+**echo3.go**
+
 ```
 package main
 
@@ -162,6 +170,8 @@ func main() {
 
 对文件做拷贝、打印、搜索、排序、统计或类似事情的程序都有一个差不多的程序结构：一个处理输入
 的循环，在每个元素上执行计算处理，在处理的同时或最后产生输出。
+
+**dup1.go**
 
 ```
 // Dup1 prints the text of each line that appears more than 
@@ -218,3 +228,168 @@ input := bufio.NewScanner(os.Stdin)
 Scan 函数在读到一行时返回 true，不再有输入时返回 false。
 
 类似于 C 或其它语言里的 printf 函数，fmt.Printf 函数对一些表达式产生格式化输出。
+
+**dup2.go**
+
+```
+// Dup2 prints the count and text of lines that appear more than once
+// in the input. It reads from stdin or from a list of named files.
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "os"
+)
+
+func main() {
+    counts := make(map[string]int)
+    files := os.Args[1:]
+    if len(files) == 0 {
+        countLines(os.Stdin, counts)
+    } else {
+        for _, arg := range files {
+            f, err := os.Open(arg)
+            if err != nil {
+                fmt.Fprintf(os.Stderr, "dup2: %v\n", err)
+                continue
+            }
+            countLines(f, counts)
+            f.Close()
+        }
+    }
+    for line, n := range counts {
+        if n > 1 {
+            fmt.Printf("%s\t", line)
+            // fmt.Printf("%d\t%s\n", n, line)
+        } else {
+            fmt.Println("Hello world!")
+        }
+    }
+}
+
+func countLines(f *os.File, counts map[string]int) {
+    input := bufio.NewScanner(f)
+    for input.Scan() {
+        fmt.Printf("%s\n", input.Text())
+        counts[input.Text()] ++
+    }
+}
+```
+
+os.Open 函数返回两个值。第一个值是被打开的文件(*os.File)，其后被 Scanner 读取。第二个值是内置 error 类型的值。如果 err 等于内置值 nil 
+（译注：相当于其它语言里的 NULL），那么文件被成功打开；相反的话，如果 err 的值不是 nil，说明打开文件时出错了。这种情况下，错误值描述了所遇到
+的问题。该例的错误处理非常简单，只是使用 Fprintf 与表示任意类型默认格式值的动词 %v，向标准错误流打印一条信息。
+
+注意 countLines 函数在其声明前被调用。函数和包级别的变量(package-level entities)可以任意顺序声明，并不影响其被调用。（译注：最后还是遵循
+一定的规范）
+
+map 是一个由 make 函数创建的数据结构的引用。map 作为参数传递给某函数时，该函数接收这个引用的一份拷贝（copy，或译为副本），被调用函数对 map 
+底层数据结构的任何修改，调用者函数都可以通过持有的 map 引用看到。在该例中，countLines 函数向 counts 插入的值，也会被 main 函数看到。（译
+注：类似于 C++ 里的引用传递，实际上指针是另一个指针了，但内部存的值指向同一块内存）
+
+dup 的前两个版本以“流”模式读取输入，并根据需要拆分成多个行。理论上，这些程序可以处理任意数量的输入数据。还有另一个方法，就是一口气把全部输入
+数据读到内存中，一次分割为多行，然后处理它们。下面这个版本，dup3，就是这么操作的。这个例子引入了 ReadFile 函数（来自于 io/ioutil 包），其
+读取指定文件的全部内容，strings.Split 函数把字符串分割成子串的切片。（Split 的作用与前文提到的 strings.Join 相反。）
+
+**dup3**
+
+```
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+)
+
+func main() {
+	counts := make(map[string]int)
+	for _, filename := range os.Args[1:] {
+		data, err := ioutil.ReadFile(filename)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "dup3: %v\n", err)
+			continue
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			counts[line] ++
+		}
+	}
+	for line, n := range counts {
+		if n > 1 {
+			fmt.Printf("%d\t%s", n, line)
+		}
+	}
+}
+```
+
+ReadFile 函数返回一个字节切片(byte slice)，必须把它转换为 string，才能用 strings.Split 分割。
+
+实现上，bufio.Scanner、ioutil.ReadFile 和 ioutil.WriteFile 都使用 *os.File 的 Read 和 Write 方法，但是，一般很少需要直接调用那些
+低级(lower-level)函数。高级(higher-level)函数，像 bufio 和 io/ioutil 包中所提供的那些用起来要容易点。
+
+
+> GIF 动画
+
+下面的程序会演示 Go 语言标准库里的 image 这个 package 的用法，将用这个包来生成一系列的 bit-mapped 图，然后将这些图片编码为一个 GIF 动画。
+这个图形名字叫利萨如图形(Lissajous figures)。这段代码使用了一些新的结构，包括 const 声明，struct 结构体类型，复合声明。
+
+**lissajous**
+
+```
+package main
+
+import (
+	"image"
+	"image/color"
+	"image/gif"
+	"io"
+	"math"
+	"math/rand"
+	"os"
+	"time"
+)
+
+var palette = []color.Color{color.White, color.Black}
+
+const (
+	WhiteIndex = 0 // first color in palette
+	blackIndex = 1 // next color in palette
+)
+
+func main() {
+	// The sequence of images is deterministic unless we seed
+	// the pseudo-random number generator using the current time.
+	// Thank to Randall McPherson for pointing out the omission.
+	rand.Seed(time.Now().UTC().UnixNano())
+	lissajous(os.Stdout)
+}
+
+func lissajous(out io.Writer) {
+	const (
+		cycles  = 5      // number of complete x oscillator revolutions
+		res     = 0.001  // angular resolution
+		size    = 100    // image canvas covers [-size..+size]
+		nframes = 64     // number of animation frames
+		delay   = 8      // delay between frames in 10 ms units
+	)
+
+	freq := rand.Float64() * 3.0  // relative frequency of y oscillator
+	anim := gif.GIF{LoopCount: nframes}
+	phase := 0.0  // phase difference
+	for i := 0; i < nframes; i ++ {
+		rect := image.Rect(0, 0, 2 * size + 1, 2 * size + 1)
+		img := image.NewPaletted(rect, palette)
+		for t := 0.0; t < cycles * 2 * math.Pi; t += res {
+			x := math.Sin(t)
+			y := math.Sin(t * freq + phase)
+			img.SetColorIndex(size + int(x * size + 0.5), size + int(y * size + 0.5), blackIndex)
+		}
+		phase += 0.1
+		anim.Delay = append(anim.Delay, delay)
+		anim.Image = append(anim.Image, img)
+	}
+	gif.EncodeAll(out, &anim)  // NOTE: ignoring encoding errors
+}
+```
