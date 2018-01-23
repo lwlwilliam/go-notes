@@ -5,12 +5,16 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
+	// "strings"
+	"strconv"
 )
 
 func main() {
-	fmt.Println(strings.Join(os.Args))
+	// fmt.Println(strings.Join(os.Args[1:], "\n"))
+	var s, sep string
+	for index, value := range os.Args[1:] {
+        sep = strconv.Itoa(index)
+        s += sep + " : " + value + "\n"
+	}
+	fmt.Println(s)
 }
-
-
-

@@ -1,5 +1,5 @@
 // Echo1 prints its command-line arguments.
-package demo
+package main
 
 import (
     "fmt"

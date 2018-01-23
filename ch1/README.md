@@ -157,3 +157,64 @@ func main() {
 	fmt.Println(strings.Join(os.Args[1:], " "))
 }
 ```
+
+>> 查找重复的行
+
+对文件做拷贝、打印、搜索、排序、统计或类似事情的程序都有一个差不多的程序结构：一个处理输入
+的循环，在每个元素上执行计算处理，在处理的同时或最后产生输出。
+
+```
+// Dup1 prints the text of each line that appears more than 
+// once int the standard input, preceded by its count.
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+)
+
+func main() {
+	counts := make(map[string]int)
+	input := bufio.NewScanner(os.Stdin)
+	for input.Scan() {
+		counts[input.Text()]++
+	}
+	// NOTE: ignoring potential errors from input.Err()
+	for line, n := range counts {
+		if n > 1 {
+			fmt.Printf("%d\t%s\n", n, line)
+		}
+	}
+}
+```
+
+正如 for 循环一样，if 语句条件两边也不加括号，但是主体部分需要加。
+
+map 存储了键/值(key/value)的集。键值可以是任意类型。该例中的键是字符串，值是整数。内置函数 make 创建 map。（译注：从功能和实现上说，
+Go 的 map 类似于 Java 中的 HashMap，Python 中的 dict，Lua 中的 table，通常使用 hash 实现。
+
+每次 dup 读取一行输入，该行被当做 map，其对应的值递增。`counts[input.Text()]++`语句等价于下面两句：
+
+```
+line := input.Text()
+counts[line] = counts[line] + 1
+```
+
+为了打印结果，使用了基于 range 的循环，并在 counts 这个 map 上迭代。map 的迭代顺序并不确定，从实践来看，该顺序随机，每次运行都会变化。
+这种设计是有意为之的，因为能防止程序依赖特定遍历顺序，而这是无法保证的（译注：具体可以参见这里 
+[https://stackoverflow.com/questions/11853396/google-go-lang-assignment-order](https://stackoverflow.com/questions/11853396/google-go-lang-assignment-order)）
+
+继续来看 bufio 包，它使处理输入和输出方便又高效。Scanner 类型是该包最有用的特性之一，它读取输入并将其拆成行或单词；通常是处理行形式的
+输入最简单的方法。
+
+程序使用短变量声明创建 bufio.Scanner 类型的变量 input。
+
+```
+input := bufio.NewScanner(os.Stdin)
+```
+
+该变量从程序的标准输入中读取内容。每次调用 input.Scan()，即读入下一行，并移除行末的换行符；读取的内容可以调用 input.Text() 得到。
+Scan 函数在读到一行时返回 true，不再有输入时返回 false。
+
+类似于 C 或其它语言里的 printf 函数，fmt.Printf 函数对一些表达式产生格式化输出。
