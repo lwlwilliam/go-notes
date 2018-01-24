@@ -292,7 +292,7 @@ dup 的前两个版本以“流”模式读取输入，并根据需要拆分成�
 数据读到内存中，一次分割为多行，然后处理它们。下面这个版本，dup3，就是这么操作的。这个例子引入了 ReadFile 函数（来自于 io/ioutil 包），其
 读取指定文件的全部内容，strings.Split 函数把字符串分割成子串的切片。（Split 的作用与前文提到的 strings.Join 相反。）
 
-**dup3**
+**dup3.go**
 
 ```
 package main
@@ -335,7 +335,7 @@ ReadFile 函数返回一个字节切片(byte slice)，必须把它转换为 stri
 下面的程序会演示 Go 语言标准库里的 image 这个 package 的用法，将用这个包来生成一系列的 bit-mapped 图，然后将这些图片编码为一个 GIF 动画。
 这个图形名字叫利萨如图形(Lissajous figures)。这段代码使用了一些新的结构，包括 const 声明，struct 结构体类型，复合声明。
 
-**lissajous**
+**lissajous.go**
 
 ```
 package main
@@ -392,4 +392,189 @@ func lissajous(out io.Writer) {
 	}
 	gif.EncodeAll(out, &anim)  // NOTE: ignoring encoding errors
 }
+```
+
+> 获取 URL
+
+对于很多现代应用来说，访问互联网上的信息和访问本地文件系统一样重要。Go 语言在 net 这个强大 package 的帮助下提供了一系列的 package 来做
+这件事情，使用这些包可以更简单地用网络收发信息，还可以建立更底层的网络连接，编写服务器程序。在这些情景下，Go 语言原生的并发特性显得尤其好用。
+
+以下示例 fetch，将获取对应 url，并将其源文本打印出来。
+
+**fetch.go**
+
+```
+// Fetch prints the content found at a URL.
+package main
+
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+)
+
+func main() {
+	for _, url := range os.Args[1:] {
+		resp, err := http.Get(url)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "fetch: %v\n", err)
+			os.Exit(1)
+		}
+		b, err := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "fetch: reading %s: %v\n", url, err)
+			os.Exit(1)
+		}
+		fmt.Printf("%s", b)
+	}
+}
+```
+
+http.Get 函数是创建 HTTP 请求的函数，如果获取过程没有出错，那么会在 reps 这个结构体中得到访问的请求结果。resp 的 Body 字段包括一个
+可读的服务器响应流。ioutil.ReadAll 函数从 response 中读取到全部内容；将其结果保存在变量 b 中。resp.Body.Close 关闭 resp 的 Body 流，
+防止资源泄露，Printf 把结果 b 写出到标准输出流中。
+
+
+> 并发获取多个 URL
+
+Go 语言最有民并且最新奇的特性就是对并发编程的支持。
+
+**fetchall.go**
+
+```
+// Fetchall fetches URLs in parallel and reports their times and sizes.
+package main
+
+import (
+	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"time"
+	"os"
+)
+
+func main() {
+	start := time.Now()
+	ch := make(chan string)
+	for _, url := range os.Args[1:] {
+		go fetch(url, ch)  // start a goroutine
+	}
+	for range os.Args[1:] {
+		fmt.Println(<-ch)  // receive from channel ch
+	}
+	fmt.Printf("%.2fs elapsed\n", time.Sice(start).Seconds())
+}
+
+func fetch(url string, ch chan <- string) {
+	start := time.Now()
+	resp, err := http.Get(url)
+	if err != nil {
+		ch <- fmt.Sprint(err)  // send to channel ch
+		return
+	}
+	nbytes, err := io.Copy(ioutil.Discard, resp.Body)
+	resp.Body.Close() // don't leak resources
+	if err != nil {
+		ch <- fmt.Sprintf("while reading %s: %v", url, err)
+		return
+	}
+	secs := time.Since(start).Seconds()
+	ch <- fmt.Sprintf("%.2fs %7d %s", secs, nbytes, url)
+}
+```
+
+goroutine 是一种函数的并发执行方式，而 channel 是用来在 goroutine 之间进行参数传递。main 函数本身也运行在一个 goroutine 中，而 
+go function 则表示创建一个新的 goroutine，并在这个新的 goroutine 中执行这个函数。
+
+main 函数中用 make 函数创建了一个传递 string 类型参数的 channel，对每一个命令行参数，都用 go 关键字来创建一个 goroutine，并且让函数
+在这个 goroutine 异步执行 http.Get 方法。这个程序里的 io.Copy 会把响应的 Body 内容拷贝到 ioutil.Discard 输出流中（译注：可以把这个
+变量看作一个垃圾桶，可以向里面写一些不需要的数据）。每当请求返回内容时，fetch 函数都会往 ch 这个 channel 里写入一个字符串，由 main 函数
+里的第二个 for 循环来处理并打印 channel 里的这个字符串。
+
+
+> Web 服务
+
+Go 语言的内置库使得写一个类似 fetch 的 web 服务器变得异常简单。
+
+**server1.go**
+
+```
+// Server1 is a minimal "echo" server.
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+)
+
+func main() {
+	http.HandleFunc("/", handler)  // each request calls handler
+	log.Fatal(http.ListenAndServe("localhost:8000", nil))
+}
+
+// handler echoes the Path component of the request URL r.
+func handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "URL.Path = %q\n", r.URL.Path)
+}
+```
+
+只用了八九行代码就完成了一个 Web 服务程序，这都多亏了标准库里的方法已经帮我们完成了大量工作。main 函数将所有发送到/路径下的请求和 handler 函
+数关联起来，/ 开头的请求其实就是所有发送到当前站点上的请求，服务监听 8000 端口。发送到这个服务的“请求”是一个 http.Request 类型的对象，
+这个对象中包含了请求中的一系列相关字段，其中就包括我们需要的 URL。当请求到达服务器时，这个请求会被传给 handler 函数来处理，这个函数会将 
+/hello 这个路径从请求的 URL 中解析出来，然后把其发送到响应中。
+
+在这个服务的基础上叠加特性是很容易的。一种比较实用的修改是为访问的 url 添加某种状态。比如，下面版本输出了同样的内容，但是会对请求的次数进行
+计算；对 URL 的请求结果会包含各种 URL 被访问的总次数，直接对 /count 这个 URL 的访问要除外。
+
+**server2.go**
+
+```
+// Server2 is a minimal "echo" and counter server.
+package main
+
+import (
+	"fmt"
+	"log"
+	"net/http"
+	"sync"
+)
+
+var mu sync.Mutex
+var count int
+
+func main() {
+	http.HandleFunc("/", handler)
+	http.HandleFunc("/count", counter)
+	log.Fatal(http.ListenAndServe("localhost:8000", nil))
+}
+
+// handler echoes the Path component of the requested URL.
+func handler(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	count ++
+	mu.Unlock()
+	fmt.Fprintf(w, "URL.Path = %q\n", r.URL.Path)
+}
+
+// counter echoes the number of calls so far.
+func counter(w http.ResponseWriter, r *http.Request) {
+	mu.Lock()
+	fmt.Fprintf(w, "Count %d\n", count)
+	mu.Unlock()
+}
+```
+
+这个服务器有两个请求处理函数，根据请求的 url 不同会调用不同的函数：对 /count 这个 url 的请求会调用到 counter 这个函数，其它的 url 都会
+调用默认的处理函数。如果请求 pattern 是以 / 结尾，那么所有以该 url 为前缀的 url 都会被这条规则匹配。在这些代码的背后，服务器每一次接收请求
+处理时都会另起一个 goroutine，这样服务器就可以同一时间处理多个请求。然而在并发情况下，假如真的有两个请求同一时刻去更新 count，那么这个值
+可能并不会被正确地增加；这个程序可能会引发一个严重的 bug：竞态条件。为了避免这个问题，必须保证每次修改变量的最多只能有一个 goroutine，这也就
+是代码里的 mu.Lock() 和 mu.Unlock() 调用将修改 count 的所有行为包在中间的目的。
+
+**server3.go**
+
+```
 ```
