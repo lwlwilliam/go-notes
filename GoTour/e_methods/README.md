@@ -65,3 +65,62 @@ type Stringer interface {
 ```
 
 `Stringer`是一个可以用字符串描述自己的类型。`fmt`包（还有其他包）使用这个来进行输出。
+
+> 练习：Stringers
+
+[exercise-stringer.go](exercise-stringer.go)
+
+让`IPAddr`类型实现`fmt.Stringer`以便用点分格式输出地址。
+
+例如，`IPAddr{1, 2, 3, 4}`应当输出`1.2.3.4`。
+
+> 错误
+
+[errors.go](errors.go)
+
+`Go`程序使用`error`值来表示错误状态。
+
+与`fmt.Stringer`类似，`error`类型是一个内建接口：
+
+```go
+type error interface {
+	Error() string
+}
+```
+
+(与`fmt.Stringer`类似，`fmt`包在输出时也会试图匹配`error`。)
+
+通常函数会返回一个`error`值，调用的它的代码应当判断这个错误是否等于`nil`，来进行错误处理。
+
+```go
+i, err := strconv.Atoi("42")
+if err != nil {
+	fmt.Printf("couldn't convert number: %v\n", err)
+	return
+}
+fmt.Println("Converted integer: ", i)
+```
+
+`error`为`nil`时表示成功：非`nil`的`error`表示错误。
+
+> 练习：错误(未完待续：TODO)
+
+[exercise-errors.go](exercise-errors.go)
+
+> Readeres
+
+[reader.go](reader.go)
+
+`io`包指定了`io.Reader`接口，它表示从数据流结尾读取。
+
+`Go`标准库包含了这个接口的许多实现，包括文件、网络连接、压缩、加密等等。
+
+`io.Reader`接口有一个`Read`方法：
+
+```go
+func (T) Read(b []byte) (n int, err error)
+```
+
+`Read`用数据填充指定的字节`slice`，并且返回填充的字节数和错误信息。在遇到数据流结尾时，返回`io.EOF`错误。
+
+例子代码创建了一个`strings.Reader`。并且以每次 8 字节的速度读取它的输出。
