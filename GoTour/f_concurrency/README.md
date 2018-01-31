@@ -81,3 +81,53 @@ v, ok := <-ch
 
 `select`会阻塞，直到条件分支中的某个可以继续执行，这时就会执行那个条件分支。
 当多个都准备好的时候，会随机选择一个。
+
+> 默认选择
+
+[default-selection.go](default-selection.go)
+
+当`select`中的其他条件分支都没有准备好的时候，`default`分支会被执行。
+
+为了非阻塞的发送或者接收，可使用`default`分支：
+
+```go
+select {
+case i := <-c:
+	// 使用 i
+default:
+    // 从 c 读取会阻塞
+}
+```
+
+> 练习：等价二叉树
+
+```go
+// TODO
+```
+
+> sync.Mutex
+
+[mutex-counter.go](mutex-counter.go)
+
+`channel`用来在各个`goroutine`间进行通信是非常合适的。
+
+但是如果我们不需要通信呢？比如说，如果我们只是想保证在每个时刻，只有一个`goroutine`能访问一个共享的变量从而避免冲突？
+
+这里涉及的概念叫做`互斥`，通常使用`互斥锁(mutex)`来提供这个限制。
+
+`Go`标准库中提供了`sync.Mutex`类型及其两个方法：
+
+```go
+Lock
+Unlock
+```
+
+我们可以通过在代码前调用`Lock`方法，在代码后调用`Unlock`方法来保证一段代码的互斥执行。参见`Inc`方法。
+
+也可以用`defer`语句来保证互斥锁一定会被解锁。参见`Value`方法。
+
+> 练习：Web 爬虫
+
+```go
+// TODO
+```
