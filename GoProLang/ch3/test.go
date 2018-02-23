@@ -1,8 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
-	var u uint8 = 1
-	fmt.Println(u << 1, u >> 1, u & 1, u | 1, u ^ 1)
+	s := "hello, world"
+	t := s
+	s[4] = 'K'
+	fmt.Println(s)
 }
