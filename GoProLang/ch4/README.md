@@ -287,3 +287,66 @@ func main() {
     fmt.Println(remove(s, 2))  // "[5 6 9 8]"
 }
 ```
+
+> Map
+
+哈希表是一种巧妙并且实用的数据结构。它是一个无序的 key/value 对的集合，其中所有的 key 都是不同的，然后通过给定的 key 可以在常数时间复
+杂度内检索、更新或删除对应的 value。
+
+在 Go 语言中，一个 map 就是一个哈希表的引用，map 类型可以写为`map[K]V`，其中 K 和 V 分别对应 key 和 value。map 中所有的 key 都有相
+同的类型，所有的 value 也有着相同的类型，但是 key 和 value 之间可以是不同的数据类型。其中 K 对应的 key 必须是支持`==`比较运算符的数据
+类型，所以 map 可以通过测试 key 是否相等来判断是否已经存在。**虽然浮点数类型也是支持相等运算符比较的，但是将浮点数用做 key 类型则是一个
+坏的想法**。
+
+内置的 make 函数可以创建一个 map：
+
+```go
+ages := make(map[string]int)  // mapping from string to ints
+```
+
+也可以用 map 字面值的语法创建 map，同时还可以指定一些最初的 key/value：
+
+```go
+ages := map[string]int{
+    "alice": 31,
+    "charlie": 34,
+}
+```
+
+这相当于：
+
+```go
+ages := make(map[string]int)
+ages["alice"] = 31
+ages["charlie"] = 34
+```
+
+因此，另一种创建空 map 的表达式是`map[string]int{}`。
+
+map 中的元素通过 key 对应的下标语法访问：`ages["alice"] = 32`、`fmt.Println(ages["alice"])  // "32"`。
+
+使用内置的 delete 函数可以删除元素：`delete(ages, "alice")  // remove element ages["alice"]`。所有这些操作都是安全的，即使这些
+元素不在 map。如果一个查找失败将返回 value 类型对应的零值。
+
+**但是，map 中的元素并不是一个变量，因此不能对其进行取址操作。禁止对 map 元素取址的原因是 map 可能随着元素数量的增长而重新分配更大的内
+存空间，从而可能导致之前的地址无效。**
+
+要想遍历 map 中全部的 key/value 对的话，可以使用 range 风格的 for 循环实现。map 迭代的顺序是不确定的，并且不同的哈希函数实现可能导致
+不同的遍历顺序。在实践中，遍历的顺序是随机的。**这是故意的，每次都使用随机的遍历顺序可以强制要求程序不会依赖具体的哈希函数实现。如果要按
+顺序遍历，可以先排序。
+
+map 类型的零值是 nil，也就是没有引用任何哈希表。map 上的大部分操作，包括查找、删除、len 和 range 循环都可以安全工作在 nil 值的 map 上，
+它们的行为和一个空的 map 类似。但是向一个 nil 值的 map 存入元素将导致一个 panic 异常。
+
+Go 语言中并没有提供一个 set 类型，但是 map 中的 key 也是不相同的，可以用 map 实现类似 set 的功能。以下 dedup 程序读取多行输入，但是
+只打印第一次出现的行。dedup 程序通过 map 来表示所有的输入行所对应的 set 集合，以确保已经在集合存在的行不会被重复打印。
+
+[dedup.go](dedup.go)
+
+下面程序用于统计输入中每个 Unicode 码点出现的次数。
+
+[charcount.go](charcount.go)
+
+map 的 value 类型也可以是一个聚合类型，比如是一个 map 或 slice。
+
+[graph.go](graph.go)
