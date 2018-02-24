@@ -133,3 +133,157 @@ fmt.Println(summer)          // "[June July August]"
 字面值一样，slice 的字面值也可以按顺序指定初始化值序列，或者是通过索引和元素值指定，或者两种风格的混合语法初始化。
 
 和数组不同的是，slice 之间不能比较，因此不能使用`==`操作符来判断两个 slice 是否含有全部相等元素。
+
+如果要测试一个 slice 是否是空的，使用`len(s) == 0`来判断，而不应该用`s == nil`来判断。除了和 nil 相等比较外，
+一个 nil 值的 slice 行为和其它任意 0 长度的 slice 一样。
+
+内置的 make 函数创建一个指定元素类型、长度和容量的 slice。容量部分可以忽略，这种情况下，容量将等于长度。
+
+```go
+make([]T, len)
+make([]T, len, cap)  // same as make([]T, cap)[:len]
+```
+
+在底层，make 创建了一个匿名的数组变量，然后返回一个 slice；只有通过返回的 slice 才能引用底层匿名的数组变量。在第一种语句中，slice 是
+整个数组的 view。在第二种语句中，slice 只引用了底层数组的前 len 个元素，但是容量将包含整个数组。额外的元素是留给未来的增长用的。
+
+>> append 函数
+
+内置的 append 函数用于向 slice 追加元素：
+
+```go
+var runes []rune
+for _, r := range "Hello, 世界" {
+    runes = append(runes, r)
+}
+fmt.Printf("%q\n", runes)  // "['H' 'e' 'l' 'l' 'o' ',' ' ' '世' '界']"
+```
+
+append 函数对于理解 slice 底层是如何工作的非常重要。
+
+[append.go](append.go)
+
+每次调用 appendInt 函数，先检测 slice 底层数组是否有足够的容量来保存新添加的元素。如果有足够的空间，直接扩展 slice（依然在原有的底层
+数组之上），将新添加的 y 元素复制到新扩展的空间，并返回 slice。因此，输入的 x 和输出的 z 共享相同的底层数组。
+
+如果没有足够的增长空间，appendInt 函数则会先分配一个足够大的 slice 用于保存新的结果，先将输入的 x 复制到新的空间，然后添加 y 元素。结
+果 z 和输入的 x 引用的将是不同的底层数组。
+
+为了提高内存使用效率，新分配的数组一般略大于保存 x 和 y 所需要的最低大小。通过在每次扩展数组时直接将长度翻倍从而避免了多次内存分配，也
+确保了添加单个元素的平均时间是一个常数时间。
+
+append.go 程序执行结果如下图：
+
+![img](WX20180224-110456.png)
+
+当 i ＝ 3 时，x 包含了`[0 1 2]`三个元素，但是容量是 4，因此可以简单地将新的元素添加到末尾，不需要新的内存分配。然后新的 y 的长度和容量
+都是 4，并且和 x 引用着相同的底层数组。如图：
+
+![img](WX20180224-110740.png)
+
+在下一次迭代时 i = 4，现在没有新的空余的空间了，因此 appendInt 函数分配一个容量为 8 的底层数组，将 x 的 4 个元素`[0 1 2 3]`复制到新
+空间的开头，然后添加新的元素 i，新的 y 的长度是 5，容量是 8；后面有 3 个空闲的位置，三次迭代都不需要分配新的空间。当前迭代中，y 和 x 是
+对应不同底层数组的 view。这次操作如图：
+
+![img](WX20180224-111103.png)
+
+内置的 append 函数可能使用比 appendInt 更复杂的内存扩展策略。因此，通常我们并不知道 append 调用是否导致了内存的重新分配，因此我们也不
+能确认新的 slice 和原始的 slice 是否引用的是相同的底层数组空间。同样，我们不能确认在原先的 slice 上的操作是否会影响到新的 slice。因
+此，通常是将 append 返回的结果直接赋值给输入的 slice 变量：
+
+```go
+runes = append(runes, r)
+```
+
+更新 slice 变量不仅对调用 append 函数是必要的，实际上对应任何可能导致长度、容量或底层数组变化的操作都是必要的。**要正确地使用 slice，
+需要记住尽管底层数组的元素是间接访问的，但是 slice 对应结构体本身的指针、长度和容量部分是直接访问的。** 要更新这些信息需要像上面例子那
+样一个显式的赋值操作。从这个角度看，slice 并不是一个纯粹的引用类型，它实际上是一个类似下面结构体的聚合类型：
+
+```go
+type IntSlice struct {
+    ptr *int
+    len, cap int
+}
+```
+
+上面封装的 appendInt 函数每次只能向 slice 追加一个元素，但是内置的 append 函数则可以追加多个元素，甚至追加一个 slice。
+
+```go
+var x []int
+x = append(x, 1)
+x = append(x, 2, 3)
+x = append(x, 4, 5, 6)
+x = append(x, x...)  // append the slice x
+fmt.Println(x)  // "[1 2 3 4 5 6 1 2 3 4 5 6]"
+```
+
+通过下面的小修改，可以达到 append 函数类似的功能。其中在 appendInt 函数参数中最后`...`省略号表示接收变长的参数为 slice。
+
+```go
+func appendInt(x []int, y ...int) []int {
+    var z []int
+    zlen := len(x) + len(y)
+    // ...expand z to at least zlen...
+    copy(z[len(x):], y)
+    return z
+}
+```
+
+>> Slice 内存技巧
+
+下面的 nonempty 函数将在原有 slice 内存空间之上返回不包含空字符串的列表：
+
+[nonempty.go](nonempty.go)
+
+这里比较微妙的地方是，输入的 slice 和输出的 slice 共享一个底层数组。这可以避免分配另一个数组，不过原来的数据将可能被覆盖。因此通常这样
+使用 nonempty 函数：`strings = nonempty(strings)`。
+
+nonempty 函数也可以用 append 函数来实现：
+
+[nonempty2.go](nonempty2.go)
+
+一个 slice 可以用来模拟一个 stack。
+
+```go
+stack = append(stack, v)  // push v
+```
+
+stack 的顶部位置对应 slice 的最后一个元素：
+
+```go
+top := stack[len(stack) - 1]  // top of stack
+```
+
+通过收缩 stack 可以弹出栈顶的元素
+
+```go
+stack = stack[:len(stack) - 1]  // pop
+```
+
+要删除 slice 中间的某个元素并保存原有的元素顺序，可以通过内置的 copy 函数将后面的子 slice 向前依次移动一位完成：
+
+```go
+func remove(slice []int, i int) []int {
+    copy(slice[i:], slice[i+1:])
+    return slice[:len(slice) - 1]
+}
+
+func main() {
+    s := []int{5, 6, 7, 8, 9}
+    fmt.Println(remove(s, 2))  // "[5 6 8 9]"
+}
+```
+
+如果删除元素后不用保持原来顺序的话，可以简单地用最后一个元素覆盖被删除的元素：
+
+```go
+func remove(slice []int, i int) []int {
+    slice[i] = slice[len(slice)-1]
+    return slice[:len(slice)-1]
+}
+
+func main() {
+    s := []int{5, 6, 7, 8, 9}
+    fmt.Println(remove(s, 2))  // "[5 6 9 8]"
+}
+```
