@@ -397,3 +397,7 @@ employeeOfTheMonth.Position += " (proactive team player)"
 ```go
 (*employeeOfTheMonth).Position += " (proactive team player)"
 ```
+
+如果结构体成员名字是以大写字母开头的，那么该成员就是导出的；这是 Go 语言导出规则决定的。一个结构体可能同时包含导出
+和未导出的成员。一个命名为 S 的结构体类型将不能再包含 S 类型的成员：因为一个聚合的值不能包含它自身。（该限制同样适
+应于数组）但是 S 类型的结构体可以包含 *S 指针类型的成员，这可以让我们创建递归的数据结构，比如链表和树结构等。
