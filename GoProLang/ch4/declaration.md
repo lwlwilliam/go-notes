@@ -60,7 +60,7 @@
 
 > map
 
-map 也可以用 make 函数创建：`var m = make(map[string]int`。
+map 也可以用 make 函数创建：`var m = make(map[string]int)`。
 
 1.  先声明，后初始化
     ```go
@@ -83,4 +83,33 @@ map 也可以用 make 函数创建：`var m = make(map[string]int`。
     m := map[string]int{"a":1, "b":2, "c":3}
     ```
     
-   
+> struct
+
+```go
+type S struct {
+    a int
+    b string
+    // ...
+}
+```
+
+1.  先声明，后初始化 
+    ```go
+    var s S
+    s = S{1, "test"}
+    ```
+    
+2.  声明并初始化
+    ```go
+    var s S = S{1, "test"}
+    ```
+    
+3.  由 Go 判断类型
+    ```go
+    var s = S{1, "test"}
+    ``` 
+    
+4.  只能在函数内部使用
+    ```go
+    s := S{1, "test"}
+    ```
