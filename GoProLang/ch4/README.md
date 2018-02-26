@@ -483,3 +483,114 @@ hits[address{"golang.org", 443}]++
 Go 语言提供的结构体嵌入机制让一个命名的结构体包含另一个结构体类型的匿名成员，这样就可以通过简单的点去处符`x.f`来访问匿名成员链中嵌套的
 `x.d.e.f`成员。
 
+考虑一个二维的绘图程序，提供了一个各种图形的库，例如矩形、椭圆形、星形和轮形等几何形状。
+
+下面比较几种代码的写法：
+
+1.
+    ```go
+    type Circle struct {
+        X, Y, Radius int
+    }
+    
+    type Wheel struct {
+        X, Y, Radius, Spokes int 
+    }
+    
+    var w Wheel
+    w.X = 8
+    w.Y = 8
+    w.Radius = 5
+    w.Spokes = 20
+    ```
+    
+2.
+    ```go
+    type Point struct {
+        X, Y int 
+    } 
+    
+    type Circle struct {
+        Center Point
+        Radius int 
+    }
+    
+    type Wheel struct {
+        Circle Circle
+        Spokes int 
+    }
+    
+    var w Wheel
+    w.Circle.Center.X = 8
+    w.Circle.Center.Y = 8
+    w.Circle.Radius = 5
+    w.Spokes = 20
+    ```
+    
+3.
+    ```go
+    type Point struct {
+        X, Y int 
+    } 
+    
+    type Circle struct {
+        Point
+        Radius int 
+    }
+    
+    type Wheel struct {
+        Circle
+        Spokes int 
+    } 
+    
+    var w Wheel
+    w.X = 8         // equivalent to w.Circle.Point.X = 8
+    x.Y = 8         // equivalent to w.Circle.Point.Y = 8
+    w.Radius = 5    // equivalent to w.Circle.Radius = 5
+    w.Spokes = 20
+    ```
+    
+以上方法 1 定义的 X 和 Y 属性在 Circle 和 Wheel 中重复了，为了便于维护可以单独抽取出来，如 方法 2，但是这样又出现了新的问题，那就是访
+问成员时变得繁琐了。Go 语言有一个特性让我们只声明一个成员对应的数据类型而不指明成员的名字，这类成员叫匿名成员。匿名的数据类型必须是命名
+的类型或指向一个命名类型的指针。方法 3 中 Circle 和 Wheel 各自都有一个匿名成员。可以说 Point 类型被嵌入了 Circle 结构体，同时 Circle
+类型被嵌入了 Wheel 结构体。
+
+得益于匿名嵌入的特性，我们可以直接访问叶子属性而不需要给出完整的路径，当然完整的访问路径仍然有效的。
+
+**然而，结构体字面值并没有简短表示匿名成员的语法，因此下面的语句都不能编译通过：**
+
+```go
+w = Wheel{8, 8, 5, 20}  // compile error: unknown fields
+w = Wheel{X:8, Y:8, Radius:5, Spokes: 20}  // compile error: unknown fields
+```
+
+只能用以下两种语法：
+
+```go
+w = Wheel{Circle{Point{8, 8}, 5}, 20}
+w = Wheel{
+        Circle: Circle{
+            Point: Point{X:8, Y:8},
+            Radius:5,
+        },
+        Spokes: 20,
+    }
+```
+
+由于匿名成员也有一个隐匿的名字，因此不能同时包含两个类型相同的匿名成员，这会导致名字冲突。同时，因为成员的名字是由其类型隐式地决定，所有
+匿名成员也有可见性的规则约束。
+
+其实任何命名的类型都可以作为结构体的匿名成员。但是为什么要嵌入一个没有任何子成员类型的匿名成员类型呢？答案是匿名类型的方法集。简短的点运
+算语法可以用于选择匿名成员嵌套的成员，也可以用于访问它们的方法。实际上，外层的结构体不仅仅是获得了匿名成员类型的所有成员，而且也获得了该
+类型导出的全部方法。这个机制可以用于将一个有简单行为的对象组合成有复杂行为的对象。**组合是 Go 语言中面向对象编程的核心。**
+
+> JSON
+
+JavaScript 对象表示法(JSON)是一种用于发送和接收结构化信息的标准协议。
+
+```go
+// TODO: 详细
+```
+
+> 文本和 HTML 模板
+
