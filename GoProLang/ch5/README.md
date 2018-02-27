@@ -182,4 +182,201 @@ Go 这样设计的原因是由于对于某个应该在控制流程中处理的�
     
 >> 文件结尾错误(EOF)
 
+函数经常会返回多种错误，程序必须根据错误类型，作出不同的响应。考虑这样一个例子：从文件中读取 n 个字节。如果 n 等于文件的长度，读取过程的
+任何错误都表示失败。如果 n 小于文件的长度，调用者会重复地读取固定大小的数据直到文件结束。这导致调用者必须分别处理由文件结束引起的各种错
+误。基于这样的原因，io 包保证任何由文件结束引起的读取失败都返回同一个错误——`io.EOF`。该错误在 io 包中定义：
 
+```go
+package io
+
+import "errors"
+
+// EOF is the error returned by Read when no more input is available.
+var EOF = errors.New("EOF")
+```
+
+以下是一个 demo：
+
+```go
+in := bufio.NewReader(os.Stdin)
+for {
+    r, _, err := in.ReadRune()
+    if err == io.EOF {
+        break  // finished reading
+    }
+    if err != nil {
+        return fmt.Errorf("read failed:%v", err) 
+    }
+    // ...use r... 
+}
+```
+
+因为文件结束这种错误不需要更多的描述，所以 io.EOF 有固定的错误信息——"EOF"。对于其他错误，我们可能需要在错误信息中描述错误的类型和数量，
+这使得我们不能像 io.EOF 一样采用固定的错误信息。
+
+> 函数值
+
+在 Go 中，函数被看作第一类值(first-class values)：函数像其他值一样，拥有类型，可以被赋值给其他变量，传递给函数，从函数返回。对函数值
+(function value)的调用类似函数调用。
+
+
+```go
+func square(n int) int { return n*n }
+func negative(n int) int { return -n }
+func product(m, n int) int { return m*n }
+
+f := square
+fmt.Println(f(3))  // "9"
+
+f = negative
+fmt.Println(f(3))  // "-3"
+fmt.Println(%T\n", f)  // "func(int) int"
+
+f = product  // compile error: can't assign func(int, int) int to func(int) int
+```
+
+函数类型的零值是 nil。调用值为 nil 的函数值会引起 panic 错误：
+
+```go
+var f func(int) int
+f(3)  // 此处 f 的值为 nil，会引起 panic 错误
+```
+
+函数值可以与 nil 比较，但是函数值之间是不可比较的，也不能用函数值作为 map 的 key。
+
+```go
+var f func(int) int
+if f != nil {
+    f(3)
+}
+```
+
+> 匿名函数
+
+拥有函数名的函数只能在包级语法块中被声明，通过函数字面量(function literal)，我们可绕过这一限制，在任何表达式中表示一个函数值。函数字面
+量的语法和函数声明相似，区别在于 func 关键字后没有函数名。函数值字面量是一种表达式，它的值被称为匿名函数(anonymous function)。
+
+函数字面量允许我们在使用函数时，再定义它。
+
+更为重要的是，通过这种方式定义的函数可以访问完整的词法环境(lexical environment)，这意味着在函数中定义的内部函数可以引用该函数的变量。
+
+```go
+// squares 返回一个匿名函数
+// 该匿名函数每次被调用时都会返回下一个数的平方
+func squares() func() int {
+    var x int
+    return func() int {
+        x ++
+        return x * x 
+    }
+}
+
+func main() {
+    f := squares()
+    fmt.Println(f())  // "1"
+    fmt.Println(f())  // "4"
+    fmt.Println(f())  // "9"
+    fmt.Println(f())  // "16"
+}
+```
+
+**函数 squares 返回另一个类型为 func() int 的函数。对 squares 的一次调用会生成一个局部变量 x 并返回一个匿名函数。每次调用匿名函数时，
+该函数都会先使 x 的值加 1，再返回 x 的平方。第二次调用 squares 时，会生成第二个 x 变量，并返回一个新的匿名函数。新匿名函数操作的是第
+二个 x 变量。**
+
+squares 证明，函数值不仅仅是一串代码，还记录了状态。在 squares 中定义的匿名内部函数可以访问和更新 squares 中的局部变量，这意味着匿名
+函数和 squares 中，存在变量引用。**这就是函数值属于引用类型和函数值不可比较的原因。** Go 使用闭包(closures)技术实现函数值，Go 程序员
+也把函数值叫做闭包。
+
+通过这个例子，可以看到变量的生命周期不由它的作用域决定：squares 返回后，变量 x 仍然隐式的存在于 f 中。
+
+接下来，讨论一个有点学术性的例子，考虑这样一个问题：给定一些计算机课程，每个课程都有前置课程，只有完成了前置课程才可以开始当前课程的学习；
+目标是选择出一组课程，这组课程必须确保按顺序学习时，能全部被完成。每个课程的前置课程如下：
+
+```go
+var prereqs = map[string][]string{
+    "algorithms": {"data structures"},
+    "calculus": {"linear algebra"},
+    "compilers": {
+        "data structures",
+        "formal languages",
+        "computer organization", 
+    },
+    "data structures": {"discrete math"},
+    "databases": {"data structures"},
+    "discrete math": {"intro to programming"},
+    "formal languages": {"discrete math"},
+    "networks": {"operating systems"},
+    "operating systems": {"data structures", "computer organization"},
+    "programming languages": {"data structures", "computer organization"},
+}
+```
+
+这类问题被称作拓扑排序。从概念上说，前置条件可以构成有向图。
+
+```go
+func main() {
+    for i, course := range topoSort(prereqs) {
+        fmt.Printf("%d: \t%s\n", i + 1, course) 
+    }
+}
+
+func topoSort(m map[string][]string) []string {
+    var order []string
+    seen := make(map[string]bool)
+    var visitAll func(items []string)
+    visitAll = func(items []string) {
+        for _, item := range items {
+            if !seen[item] {
+                seen[item] = true
+                visitAll(m[item])
+                order = append(order, item) 
+            } 
+        } 
+    }
+    
+    var keys []string
+    for ken := range m {
+        keys = append(keys, key) 
+    }
+    sort.Strings(keys)
+    visitAll(keys)
+    return order
+}
+```
+
+[toposort.go](toposort.go)
+
+>> 警告：捕获迭代变量
+
+```go
+var rmdirs []func()
+for _, d := range tempDirs() {
+    dir := d  // NOTE: necessary!
+    os.MkdirAll(dir, 0755)  // creates parent directories too
+    rmdirs = append(rmdirs, func() {
+        os.RemoveAll(dir) 
+    })
+}
+
+// ...do some work...
+for _, rmdir := range rmdirs {
+    rmdir()  // clean up
+}
+```
+
+为什么要在循环体中用循环变量 d 赋值一个新的局部变量，而不是像下面的代码一样直接使用循环变量 dir。需要注意，下面的代码是错误的。
+
+```go
+var rmdirs []func()
+for _, dir := ranges tempDirs() {
+    os.MkdirAll(dir, 0755)
+    rmdirs = append(rmdirs, func() {
+        os.RemoveAll(dir)  // NOTE: incorrect! 
+    })
+}
+```
+
+问题的原因在于循环变量的作用域。在上面的程序中，for 循环语句引入了新的词法块，循环变量 dir 在这个词法块中被声明。在该循环中生成的所有函
+数值都共享相同的循环变量。需要注意，函数值中记录的是循环变量的的内存地址，而不是循环变量某一时刻的值。以 dir 为例，后续的迭代会不断更新
+ dir 的值，当删除操作执行时，for 循环已完成，dir 中存储的值等于最后一次迭代的值。
