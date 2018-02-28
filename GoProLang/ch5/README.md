@@ -512,4 +512,73 @@ f.Close 发生，更有可能接近问题的本质。
 
 Go 的类型系统会在编译时捕获很多错误，但有些错误只能在运行时检查，如数组访问越界、空指针引用等。这些运行时错误会引起 panic 异常。
 
-一般而言，当 panic 异常发生时，程序会中断运行，并立即执行在该 goroutine 中被延迟的函数（defer 机制）。
+一般而言，当 panic 异常发生时，程序会中断运行，并立即执行在该 goroutine 中被延迟的函数（defer 机制）。随后，程序崩溃并输出日志信息。
+日志信息包括 panic value 和函数调用的堆栈跟踪信息。panic value 通常是某种错误信息。对于每个 goroutine，日志信息中都会有与之相对的，
+发生 panic 时的函数调用堆栈跟踪信息。通常，不需要再次运行程序去定位问题，日志信息已经提供了足够的诊断依据。因此，在填写问题报告时，一般
+会将 panic 异常和日志信息一并记录。
+
+不是所有的 panic 异常都来自运行时，直接调用内置的 panic 函数也会引发 panic 异常；panic 函数接受任何值作为参数。当某些不应该发生的场景
+发生时，就应该调用 panic。比如，当程序到达了某条逻辑上不可能到达的路径：
+
+```go
+switch s := suit(drawCard()); s {
+    case "Spades":      // ...
+    case "Hearts":      // ...
+    case "Diamonds":    // ...
+    case "Clubs":       // ...
+    default:
+        panic(fmt.Sprintf("invalid suit %q", s))    // Joker?
+}
+```
+
+除非能提供更多的错误信息，或者能更快速的发现错误，否则不需要使用断言，编译器在运行时会帮你检查代码。
+
+```go
+func Reset(x *Buffer) {
+    if x == nil {
+        panic("x is nil")  // uncessary!
+    }
+    x.elements = nil
+}
+```
+
+虽然 Go 的 panic 机制类似于其他语言的异常，但 panic 的适用场景有一些不同。由于 panic 会引起程序的崩溃，因此 panic 一般用于严重错误，
+如程序内部的逻辑不一致。对于大部分漏洞，应该使用 Go 提供的错误机制，而不是 panic，尽量避免程序的崩溃。在健壮的程序中，任何可以预料的错
+误，如不正确的输入、错误的配置或是失败的 I/O 操作都应该被优雅地处理，最好的处理方式，就是使用 Go 的错误机制。
+
+```go
+func main() {
+    f(3)
+}
+
+func f(x int) {
+    fmt.Printf("f(%d)\n", x + 0/x)  // panic if x == 0
+    defer fmt.Printf("defer %d\n", x)
+    f(x - 1)
+}
+```
+
+当 f(0) 被调用时，发生 panic 异常，之前被延迟执行的 3 个 fmt.Printf 被调用。程序中断执行后，panic 信息和堆栈信息会被输出。
+
+在 Go 的 panic 机制中，延迟函数的调用在释放堆栈信息之前。
+
+> Recover 捕获异常
+
+通常来说，不应该对 panic 异常做任何处理。但有时，也许可以从异常中恢复，至少可以在程序崩溃前，做一些操作。举个例子，当 web 服务器遇到不
+不可预料的严重问题时，在崩溃前应该将所有的连接关闭；如果不做任何处理，会使得客户一起牌等待状态。如果 web 服务器还在开发阶段，服务器甚
+至可以将异常信息反馈到客户端，帮助调试。如果在 deferred 函数中调用了内置函数 recover，并且定义该 defer 语句的函数发生了 panic 异常，
+recover 会使程序从 panic 中恢复，并返回 panic value。导致 panic 异常的函数不会继续运行，但能正常返回。在未发生 panic 时调用 recover，
+recover 会返回 nil。
+
+```go
+func Parse(input string) (s *Syntax, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("internal error: %v", p)
+		}
+	}()
+	// ...parser...
+}
+```
+
+deferred 函数帮助 Parse 从 panic 中恢复。
