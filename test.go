@@ -5,14 +5,10 @@ import (
 )
 
 func main() {
-	var m = map[string]int{
-		"a":1,
-		"b":2,
-		"c":3,
-	}
-	var n = make(map[string]int)
+	_ = double(4)	
+}
 
-	var o = map[string]int{}
-
-	fmt.Println(m, n, o)
+func double(x int) (result int) {
+	defer func() { fmt.Printf("double(%d) = %d\n", x, result) }()
+	return x + x
 }

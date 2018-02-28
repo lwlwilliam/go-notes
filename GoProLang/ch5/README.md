@@ -380,3 +380,136 @@ for _, dir := ranges tempDirs() {
 问题的原因在于循环变量的作用域。在上面的程序中，for 循环语句引入了新的词法块，循环变量 dir 在这个词法块中被声明。在该循环中生成的所有函
 数值都共享相同的循环变量。需要注意，函数值中记录的是循环变量的的内存地址，而不是循环变量某一时刻的值。以 dir 为例，后续的迭代会不断更新
  dir 的值，当删除操作执行时，for 循环已完成，dir 中存储的值等于最后一次迭代的值。
+
+> 可变参数
+
+参数数量可变的函数称为可变参数函数。在声明可变参数函数时，需要在参数列表的最后一个参数类型之前加上省略符号`...`，这表示该函数会接收任意
+数量该类型参数。
+
+[sum.go](sum.go)
+
+sum 函数返回任意个 int 类型参数的和。在函数中，vals 被看作是类型为 []int 的切片。调用者隐式地创建一个数组，并将原始参数复制到数组中，再
+把数组的一个切片作为参数传给被调函数。如果原始参数已经是切片类型，该如何传递给 sum？只需要最后一个参数后加上省略符。
+
+```go
+values := []int{1, 2, 3, 4}
+fmt.Println(sum(values...))  // "10"
+```
+
+虽然在可变参数函数内部，`...int`参数的行为看起来很像切片类型，但实际上，可变参数函数和以切片作为参数的函数是不同的。
+
+```go
+func f(...int) {}
+func g([]int) {}
+fmt.Println("%T\n", f)  // "func(...int)"
+fmt.Println("%T\n", g)  // "func([]int)"
+```
+
+可变参数函数经常被用于格式化字符串。
+
+```go
+func errorf(linenum int, format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, "Line %d: ", linenum)
+	fmt.Fprintf(os.Stderr, format, args...)
+	fmt.Fprintln(os.Stderr)
+}
+
+linenum, name := 12, "count"
+errorf(linenum, "undefined: %s", name)  // "Line 12: undefined: count"
+```
+
+interface{} 表示函数的最后一个参数可以接收任意类型。
+
+> Deferred 函数
+
+只需要在调用普通函数或方法前加上关键字 defer，就完成了 defer 所需要的语法。当 defer 语句被执行时，跟在 defer 后面的函数会被延迟执行。直
+到包含该 defer 语句的函数执行完毕时，defer 后的函数才会被执行，不论包含 defer 语句的函数是通过 return 正常结束，还是由于 panic 导致的异
+常结束。可以在一个函数中执行多条 defer 语句，它们的执行顺序与声明顺序相反。
+
+defer 语句经常被用于处理成对的操作，如打开、关闭、连接、断开连接、加锁、释放锁。通过 defer 机制，不论函数逻辑多复杂，都能保证在任何执行
+路径下，资源被释放。释放资源的 defer 应该直接跟在请求资源的语句后。
+
+[title2.go](title2.go)
+
+在处理其他资源时，也可以采用 defer 机制，比如对文件的操作：
+
+[ioutil.go](ioutil.go)
+
+或是处理互斥锁
+
+```go
+var mu sync.Mutex
+var m = make(map[string]int)
+func lookup(key string) int {
+	mu.Lock()
+	defer mu.Unlock()
+	return m[key]
+}
+```
+
+调试复杂程序时，defer 机制也常被用于记录何时进入和退出函数。下例中的 bigSlowOperation 函数，直接调用 trace 记录函数的被调情况。
+bigSlowOperation 被调时，trace 会返回一个函数值，该函数值会在 bigSlowOperation 退出时被调用。通过这种方式，可以只通过一条语句控制函数的
+入口和所有的出口，甚至可以记录函数的运行时间，如例子中的 start。需要注意一点：不要忘记 defer 语句后的圆括号，否则本该在进入时执行的操作
+会在退出时执行，而本该在退出时执行的，永远不会被执行。
+
+[trace.go](trace.go)
+
+每一次 bigSlowOperation 被调用，程序都会记录函数的进入，退出，持续时间。
+
+defer 语句中的函数会有 return 语句更新返回值变量后再执行，又因为在函数中定义的匿名函数可以访问该函数包括返回值变量在内的所有变量，所以，
+对匿名函数采用 defer 机制，可以使其观察函数的返回值。
+
+```go
+func double(x int) (result int) {
+	defer func() { fmt.Printf("double(%d)\n", x, result) }()
+	return x + x
+}
+
+_ = double(4)  // "double(4) = 8"
+```
+
+在循环体中的 defer 语句需要特别注意，因为只有在函数执行完毕后，这些被延迟的函数才会执行。下面的代码会导致系统的文件描述符耗尽，因为所有
+文件都被处理之前，没有文件会被关闭。
+
+```go
+for _, filename := range filenames {
+    f, err := os.Open(filename)
+    if err != nil {
+        return err 
+    }
+    defer f.Close()  // NOTE: risky; could run out of file descriptors
+   // ...process f...
+}
+```
+
+一种解决方法是将循环体中的 defer 语句移至另外一个函数。在每次循环时，调用这个函数。
+
+```go
+for _, filename = range filenames {
+	if err := doFile(filename); err != nil {
+		return err
+	}
+}
+
+funcn doFile(filename string) error {
+	r, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	// ...process f...
+}
+```
+
+[fetch.go](fetch.go)
+
+对 resp.Body.Close 延迟调用不做解释。上例中，通过 os.Create 打开文件进行写入，在关闭文件时，没有对 f.Close 采用 defer 机制，因为这
+会产生一些微妙的错误。许多文件系统，尤其是 NFS，写入文件时发生的错误会被延迟到文件关闭时反馈。如果没有检查文件关闭时的反馈信息，可能会导
+致数据丢失，而我们还误以为写入操作成功。如果 io.Copy 和 f.Close 都失败了，我们倾向于将 io.Copy 的错误信息反馈给调用者，因为它先于 
+f.Close 发生，更有可能接近问题的本质。
+
+> Panic 异常
+
+Go 的类型系统会在编译时捕获很多错误，但有些错误只能在运行时检查，如数组访问越界、空指针引用等。这些运行时错误会引起 panic 异常。
+
+一般而言，当 panic 异常发生时，程序会中断运行，并立即执行在该 goroutine 中被延迟的函数（defer 机制）。
