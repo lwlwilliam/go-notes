@@ -25,4 +25,27 @@ f()		// call f(); wait for it to return
 go f()	// create a new goroutine that calls f((); don't wait
 ```
 
+在下面的例子，main goroutine 将计算菲波那契数列的第 45 个元素值。由于计算函数使用低效的递归，所以会运行相当长时间，在此期间我们想让
+用户看到一个可见的标识来明程序依然在正常运行，所以来做一个动画的小图标：
+
+[spinner.go](spinner.go)
+
+动画显示了几秒之后，fib(45) 的调用成功地返回，并且打印结果：
+
+```go
+Fibonacci(45) = 1134903170
+```
+
+然后主函数返回。主函数返回时，所有的 goroutine 都会被直接打断，程序退出。除了从主函数退出或者直接终止程序之外，没有其他的编程方法能够
+让一个 goroutine 来打断另一个的执行，但是之后可以看到一种方式来实现这个目的，通过 goroutine 之间的通信来让一个 goroutine 请求其它
+的 goroutine，并让被请求的 goroutine 自行结束执行。
+
+这里的两个独立的单元，spinning 和菲波那契的计算。分别在独立的函数中，但两个函数会同时执行。
+
+> 并发的 Clock 服务
+
+网络编程是并发大显身手的一个领域。以下是一个顺序执行的时钟服务器，它会每隔一秒钟将当前时间写到客户端：
+
+[clock1.go](clock1.go)
+
 
