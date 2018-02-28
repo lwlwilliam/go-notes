@@ -5,10 +5,12 @@ import (
 )
 
 func main() {
-	_ = double(4)	
+    f(3)
 }
 
-func double(x int) (result int) {
-	defer func() { fmt.Printf("double(%d) = %d\n", x, result) }()
-	return x + x
+func f(x int) {
+    fmt.Printf("f(%d)\n", x + 0/x)  // panic if x == 0
+    defer fmt.Printf("defer %d\n", x)
+    f(x - 1)
 }
+
