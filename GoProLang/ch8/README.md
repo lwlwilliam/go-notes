@@ -48,4 +48,47 @@ Fibonacci(45) = 1134903170
 
 [clock1.go](clock1.go)
 
+Listen 函数创建了一个 net.Listener 对象，这个对象会监听一个网络端口上到来的连接，在这个例子中用的是 TCP 的 localhost:8080 端口。listener 对
+象的 Accept 方法会直接阻塞，直到一个新的连接被创建，然后会返回一个 net.Conn 对象来表示这个连接。handleConn 函数会处理一个完整的客户端连接。
+
+为了连接例子里的服务器，需要一个客户端程序，比如 netcat 这个工具（nc 命令），这个工具可以用来执行网络连接操作。
+
+```
+$ go build clock1
+$ ./clock1 &
+$ nc localhost 8080
+09:36:00
+09:36:01
+09:36:02
+09:36:03
+^C
+```
+
+如果系统没有装 nc 工具，可以用 telnet 来实现同样的效果，或者可以用以下用 go 写的简单的 telnet 程序，用 net.Dial 就可以简单地创建一个 TCP 
+连接：
+
+[netcat1.go](netcat1.go)
+
+这个程序会从连接中读取数据，并将读到的内容写到标准输出中，直到遇到 end of file 的条件或者发生错误。不过这里的服务器程序同一时间只能处理一个
+客户端连接。所以需要做一点小改动，使其支持并发。
+
+[clock.go](clock.go)
+
+> 并发的 Echo 服务
+
+clock 服务器每一个连接都会起一个 goroutine。本节中会创建一个 echo 服务器，这个服务在每个连接中会有多个 goroutine。大多数 echo 服务仅仅会返
+回读取到的内容，如下：
+
+```go
+func handleConn(c net.Conn) {
+	io.Copy(c, c)  // NOTE: ignoringn errors
+	c.Close()
+}
+```
+
+一个更有意思的 echo 服务应该模拟一个实际的 echo 的"回响"，并且一开始要用大写 HELLO 来表示"声音很大"，之后经过一小段延迟返回一个有所缓和的 
+Hello，然后一个全小写字母的 hello 表示声音渐渐变小直至消失，如下：
+
+[reverb1.go](reverb1.go)
+
 

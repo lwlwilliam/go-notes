@@ -1,4 +1,3 @@
-// Clock1 is a TCP server that periodically writes the time.
 package main
 
 import (
@@ -20,7 +19,7 @@ func main() {
 			log.Print(err)  // e.g., connection aborted
 			continue
 		}
-		handleConn(conn)  // handle one connection at a time
+		go handleConn(conn)  // handle connections concurrently
 	}
 }
 
