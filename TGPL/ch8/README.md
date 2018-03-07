@@ -94,3 +94,58 @@ Hello，然后一个全小写字母的 hello 表示声音渐渐变小直至消�
 同时需要升级客户端程序，这样它就可以发送终端的输入到服务器，并把服务端的返回输出到终端上：
 
 [netcat2.go](netcat2.go)
+
+```go
+// TODO: reverb2.go
+```
+
+> Channels
+
+如果说 goroutine 是 Go 语言程序的并发体的话，那么 channels 则是它们之间的通信机制。一个 channel 是一个通信机制，它可以让一个 goroutine 
+通过它给另一个 goroutine 发送值信息。每个 channel 都有一个特殊的类型，也就是 channels 可发送数据的类型。一个可发送 int 类型数据的 channel 
+一般写为 chan int。
+
+使用内置的 make 函数创建 channel：
+
+```go
+ch := make(chan int)  // ch has type 'chan int'
+```
+
+和 map 类似，channel 也对应一个 make 创建的底层数据结构的引用。当复制一个 channel 或用于函数参数传递时，只是拷贝了一个 channel 引用。
+
+两个相同类型的 channel 可使用`==`运算符比较。一个 channel 也可以和 nil 进行比较。
+
+一个 channel 有发送和接受两个主要操作，都是通信行为，都使用`<-`运算符。
+
+```go
+ch <- x    // a send statement
+x = <- ch  // a receive expression in an assignment statement
+<- ch      // a receive statement; result is discaded
+```
+
+channel 支持 close 操作用于关闭，随后对该 channel 的任何发送操作都将导致 panic 异常。**对一个已经被 close 过的 channel 进行接收操作依
+然可以接受到之前已经成功发送的数据。
+
+```go
+close(ch)
+```
+
+以最简单方式调用 make 函数创建的是一个无缓存的 channel，但也可以指定第二个整型参数，对应 channel 的容量。如果 channel 的容量大于零，那么
+该 channel 就是带缓存的 channel。
+
+```go
+ch = make(chan int)     // unbuffered channel
+ch = make(chan int, 0)  // unbuffered channel
+ch = make(chan int, 3)  // buffered channel with capacity 3
+```
+
+>> 不带缓存的 Channels
+
+一个基于无缓存的 Channels 的发送操作将导致发送者 goroutine 阻塞，直到另一个 goroutine 在相同的 Channels 上执行接收操作，当发送的值通过
+Channels 成功传输之后，两个 goroutine 可以继续执行。反之，如果接收操作先发生，那么接收者 goroutine 也将阻塞，直到有另一个 goroutine 在相
+同的 Channels 上执行发送操作。
+
+基于无缓存 Channels 的发送和接收操作将导致两个 goroutine 做一次同步操作。因为这个原因，无缓存 Channels 有时候也被称为同步 Channels。当通
+过一个无缓存 Channels 发送数据时，接收者收到数据发生在唤醒发送者 goroutine 之前。
+
+
