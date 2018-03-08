@@ -1,4 +1,5 @@
 // Clock1 is a TCP server that periodically writes the time.
+// listener 对象的 Appept 方法会直接阻塞，导致每次只能处理一个连接
 package main
 
 import (

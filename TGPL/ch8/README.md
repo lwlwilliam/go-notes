@@ -147,5 +147,3 @@ Channels 成功传输之后，两个 goroutine 可以继续执行。反之，如
 
 基于无缓存 Channels 的发送和接收操作将导致两个 goroutine 做一次同步操作。因为这个原因，无缓存 Channels 有时候也被称为同步 Channels。当通
 过一个无缓存 Channels 发送数据时，接收者收到数据发生在唤醒发送者 goroutine 之前。
-
-
