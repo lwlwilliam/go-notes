@@ -712,4 +712,103 @@ Runtime Error:
 panic: runtime error: assignment to entry in nil map
 ```
 
+测试映射里是否存在某个键是映射的一个重要操作。这个操作允许用户写一些逻辑来确定是否完成了某个操作或者是否在映射里缓存了特定数据。这个操作也可
+以用来比较两个映射，来确定哪些键值对互相匹配，哪些键值对不匹配。
 
+从映射取值时有两个选择。第一个选择是，可以同时获得值，以及一个表示这个键是否存在的标志。
+
+> 从映射获取值并判断键是否存在
+
+```
+// 获取键 Blue 对应的值
+value, exists := colors["Blue"]
+
+// 这个键存在吗？
+if exists {
+	fmt.Println(value)
+}
+```
+
+另一个选择是，只返回键对应的值，然后通过判断这个值是不是零值来确定键是否存在，**但是，这种方法只能用在映射存储的值都是非零值的情况。**
+
+> 从映射获取值，并通过该值判断键是否存在
+
+```
+// 获取键 Blue 对应的值
+value := colors["Blue"]
+
+// 这个键存在吗？
+if value != "" {
+	fmt.Println(value)
+}
+```
+
+在 Go 语言里，通过键来索引映射时，即使这个键不存在也总会返回一个值。在这种情况下，返回的是该值对应的类型的零值。
+
+迭代映射里的所有值和迭代数组或切片一样，使用关键字 range。
+
+> 使用 range 迭代映射
+
+```
+colors := map[string]string{
+	"AliceBlue": "#f0f8ff",
+	"Coral": "#ff7f50",
+	"DardGray": "#a9a9a9",
+	"ForestGreen": "#228b22",
+}
+
+for key, value := range colors {
+	fmt.Printf("Key: %s Value: %s\n", key, value)
+}
+```
+
+如果想把一个键值对从映射里删除，就使用内置的 delete 函数。
+
+> 从映射中删除一项
+
+```
+// 删除键为 Coral 的键值对
+delete(colors, "Coral")
+
+// 显示映射里的所有颜色
+for key, value := range colors {
+	fmt.Printf("Key: %s Value: %s\n", key, value)
+}
+```
+
+### 在函数间传递映射
+
+在函数间传递映射并不会制造出该映射的一个副本。实际上，当传递映射给一个函数，并对这个映射做了修改时，所有对这个映射的引用都会察觉到这个修改。
+
+> 在函数间传递映射
+
+```
+func main() {
+	// 创建一个映射时，存储颜色以及颜色对应的十六进制代码
+	colors := map[string]string{
+		"AliceBlue": "#f0f8ff",
+		"Coral": "#ff7F50",
+		"DardGray": "#a9a9a9",
+		"ForestGreen": "#228b22",
+	}
+
+	// 显示映射里的所有颜色
+	for key, value := range colors {
+		fmt.Printf("Key: %s Value: %s\n", key, value)
+	}
+
+	// 调用函数来移除指定的键
+	removeColor(colors, "Coral")
+
+	// 显示映射里的所有颜色
+	for key, value := range colors {
+		fmt.Printf("Key: %s Value: %s\n", key, value)
+	}
+}
+
+func removeColor(colors map[string]string, key string) {
+	delete(colors, key)
+}
+```
+
+这个特性和切片类似，保证可以用很小的成本来复制映射。
