@@ -229,6 +229,40 @@ MarshalText 方法是用 IP 类型的值接收者声明的。一个值接收者�
 // ipEmptyString 像 ip.String 一样，
 // 只不过在没有设置 ip 时会返回一个空字符串
 func ipEmptyString(ip IP) string {
-
+    if len(ip) == 0 {
+        return "" 
+    }
+    return ip.String()
 }
 ```
+
+这个函数需要传入一个 IP 类型的值。再一次，可以看到调用者传入的是这个引用类型的值，而不是通过引用共享给这个函数。调用者将引用类型的值的副本传入
+这个函数。最后要说的是，引用类型的值在其他方面像原始的数据类型的值一样对待。
+
+### 结构类型
+
+结构类型可以用来描述一组数据值，这组值的本质即可以是原始的，也可以是非原始的。
+
+> golang.org/src/time/time.go
+
+```go
+type Time struct {
+	// sec 给出自公元 1 年 1 月 1 日 00:00:00
+	// 开始的秒数
+	sec int64
+	
+	// nsec 指定了一秒内的纳秒偏移
+	// 这个值是非零值
+	// 必须在 [0, 999999999] 范围内
+	nsec int32
+	
+	// loc 指定了一个 Location，
+	// 用于决定该时间对应的当地的分、小时、
+	// 天和年的值
+	// 只有 Time 的零值，其 loc 的值是 nil
+	// 这种情况下，认为处于 UTC 时区
+	loc *Location
+}
+```
+
+
