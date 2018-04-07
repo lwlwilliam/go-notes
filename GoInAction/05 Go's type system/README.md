@@ -265,4 +265,33 @@ type Time struct {
 }
 ```
 
+以上是 Time 类型的实现。下面是 Now 函数创建 Time 类型的值。
 
+> golang.org/src/time/time.go
+
+```
+func Now() Time {
+    sec, nsec := now()
+    return Time{sec + unixToInternal, nsec, Local}
+}
+```
+
+这个函数创建了一个 Time 类型的值，并给调用者返回了 Time 值的副本。这个函数没有使用函数指针来共享 Time 值。
+
+> golang.org/src/time/time.go
+
+```go
+func (t Time) Add(d Duration) Time {
+	t.sec += int64(d / 1e9)
+	nsec := int32(t.nsec) + int32(d % 1e9)
+	if nsec >= 1e9 {
+		t.sec ++
+		nsec -= 1e9
+	} else if nsec < 0 {
+		t.sec --
+		nsec += 1e9
+	}
+	t.nsec = nsec
+	return t
+}
+```
