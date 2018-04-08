@@ -12,16 +12,19 @@ func main() {
 	// 创建一个未公开的类型的变量
 	// 并将其初始化为 10
 	/*
-	不能引用未公开的名字 counters.alterCounter
-	未定义: counters.alterCounter
+	不能引用未公开的名字 counters.alertCounter
+	未定义: counters.alertCounter
 
-	cannot refer to unexported name counters.alterCounter
-	undefined: counters.alterCounter
+	cannot refer to unexported name counters.alertCounter
+	undefined: counters.alertCounter
 	 */
 
-	//counter := counters.alterCounter(10)
+	//counter := counters.alertCounter(10)
 	//fmt.Printf("Counter: %d\n", counter)
 
-	counter := counters.AlterCounter(10)
+	counter := counters.AlertCounter(10)
 	fmt.Printf("Counter: %d\n", counter)
+
+	counter2 := counters.New(10)
+	fmt.Printf("Counter2: %d\t%T\n", counter2, counter2)
 }
