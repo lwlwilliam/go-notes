@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -29,17 +28,6 @@ var templates = template.Must(template.ParseFiles("edit.html", "view.html"))
 // MustCompile 与 Compile 的区别是：如果表达式错误，会导致 panic 错误，而 Compile 会返回一个作为第二个参数的 error 值
 var validPath = regexp.MustCompile("^/(edit|save|view)/([a-zA-Z0-9]+)$")
 
-// 通过 URL 路径获取 title
-func getTitle(w http.ResponseWriter, r *http.Request) (string, error) {
-	// 验证 URL 路径，提取 title
-	m := validPath.FindStringSubmatch(r.URL.Path)
-	if m == nil {
-		http.NotFound(w, r)
-		return "", errors.New("Invalid Page Title")
-	}
-	return m[2], nil
-}
-
 // Page 描述了页面数据在内存中是如何存储的，然而怎么永久存储？
 // 可以用 save 方法把页面的 Body 部分保存到 text 文件中，文件名为 Title
 func (p *Page) save() error {
@@ -57,6 +45,7 @@ func loadPage(title string) (*Page, error) {
 	return &Page{Title: title, Body: body}, nil
 }
 
+// 渲染模板
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 	err := templates.ExecuteTemplate(w, tmpl + ".html", p)
 	if err != nil {
@@ -66,11 +55,7 @@ func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
 
 // 允许用户查看 wiki 页面。处理以 "/view/" 为前缀的 URL
 // 从 r.URL.Path 提取页面 Title
-func viewHandler(w http.ResponseWriter, r *http.Request) {
-	title, err := getTitle(w, r)
-	if err != nil {
-		return
-	}
+func viewHandler(w http.ResponseWriter, r *http.Request, title string) {
 	p, err := loadPage(title)
 	// 如果请求的页面不存在，重定向到编辑页
 	if err != nil {
@@ -81,11 +66,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // 加载页面（如果不存在就创建空页面结构），并显示 HTML 表单
-func editHandler(w http.ResponseWriter, r *http.Request) {
-	title, err := getTitle(w, r)
-	if err != nil {
-		return
-	}
+func editHandler(w http.ResponseWriter, r *http.Request, title string) {
 	p, err := loadPage(title)
 	if err != nil {
 		p = &Page{Title: title}
@@ -93,14 +74,11 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "edit", p)
 }
 
-func saveHandler(w http.ResponseWriter, r *http.Request) {
-	title, err := getTitle(w, r)
-	if err != nil {
-		return
-	}
+// 保存页面
+func saveHandler(w http.ResponseWriter, r *http.Request, title string) {
 	body := r.FormValue("body")
 	p := &Page{Title: title, Body: []byte(body)}
-	err = p.save()
+	err := p.save()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -108,12 +86,23 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/view/" + title, http.StatusFound)
 }
 
+// 包装函数，返回 http.HandleFunc 类型的函数
+func makeHandler(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc{
+	return func(w http.ResponseWriter, r *http.Request) {
+		// 验证 URL 路径，提取 title
+		m := validPath.FindStringSubmatch(r.URL.Path)
+		if m == nil {
+			http.NotFound(w, r)
+			return
+		}
+		fn(w, r, m[2])
+	}
+}
+
 // 测试
 func main() {
-	//var page = Page{Title: "test", Body: []byte("This is just a test.")}
-	//page.save()
-	http.HandleFunc("/view/", viewHandler)
-	http.HandleFunc("/edit/", editHandler)
-	http.HandleFunc("/save/", saveHandler)
+	http.HandleFunc("/view/", makeHandler(viewHandler))
+	http.HandleFunc("/edit/", makeHandler(editHandler))
+	http.HandleFunc("/save/", makeHandler(saveHandler))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
