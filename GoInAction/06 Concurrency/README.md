@@ -182,3 +182,5 @@ value := <- buffered
 goroutine 同时准备好，才能完成发送和接收操作。如果两个 goroutine 没有同时准备好，通道会导致先执行发送或接收操作的 
 goroutine 阻塞等待。这种对通道进行发送和接收的交互行为本身就是同步的。其中任意一个操作都无法离开另一个操作单独存在。下面
 来看完整的例子，[listing20.go](listing20.go)。
+
+另一个例子，用不同的模式，使用无缓冲的通道，在 goroutine 之间同步数据，来模拟接力比赛，[listing22.go](listing22.go)。
