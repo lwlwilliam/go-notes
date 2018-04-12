@@ -15,6 +15,7 @@ func main() {
 	baton := make(chan int)
 
 	// 为最后一位跑步者将计数加 1
+	// 等待一个 goroutine 的返回
 	wg.Add(1)
 
 	// 第一位跑步者持有接力棒
@@ -29,6 +30,7 @@ func main() {
 
 // Runner 模拟接力比赛中的一位跑步者
 func Runner(baton chan int) {
+	// 新的接力队员
 	var newRunner int
 
 	// 等待接力棒
@@ -37,7 +39,7 @@ func Runner(baton chan int) {
 	// 开始绕着跑道跑步
 	fmt.Printf("Runner %d Running With Baton\n", runner)
 
-	// 创建下一位跑步者
+	// 当前不是最后一个接力队员，下一个队员准备
 	if runner != 4 {
 		newRunner = runner + 1
 		fmt.Printf("Runner %d To The Line\n", newRunner)
