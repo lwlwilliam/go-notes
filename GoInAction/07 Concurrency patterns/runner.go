@@ -1,5 +1,12 @@
-// Gabriel Aszalos 协助完成了这个示例
-// runner 包管理处理任务的运行和生命周期
+/*
+Gabriel Aszalos 协助完成了这个示例
+runner 包管理处理任务的运行和生命周期
+
+该程序展示了依据调度运行的无人值守的面向任务的程序，及其所使用的并发模式。在设计上，可支持以下终止点：
+* 程序可以在分配的时间内完成工作，正常终止；
+* 程序没有及时完成工作，"自杀"；
+* 接收到操作系统发送的中断事件，程序立刻试图清理状态并停止工作；
+ */
 package runner
 
 import (
@@ -28,7 +35,7 @@ type Runner struct {
 var ErrTimeout = errors.New("received timeout")
 
 // ErrInterrupt 会有接收到操作系统的事件时返回
-var ErrInterrupt = errors.Now("received interrupt")
+var ErrInterrupt = errors.New("received interrupt")
 
 // New 返回一个新的准备使用的 Runner
 func New(d time.Duration) *Runner {
