@@ -2,7 +2,7 @@
 
 > 原文: [https://yourbasic.org/golang/goroutines-explained/](https://yourbasic.org/golang/goroutines-explained/)
 
-**go 语句会在一个隔离的执行线程中运行函数**。
+**go 语句会让在一个函数在隔离的（另外的）执行线程中运行**。
 
 你可以使用 go 语句开启一个新的执行线程 goroutine。该语句会在另外一个新建的 goroutine 中运行函数。程序中的所有 goroutine 共享相同的地址空间。
 
@@ -22,7 +22,7 @@ func main() {
 ```
 
 接下来的程序很可能会同时打印"Hello from main goroutine"和"Hello from another goroutine"。它们打印的顺序是随机的。然而也有可能第二个 goroutine 执行
-非常慢以致无法在程序结束前打印它的信息。
+非常慢以至无法在程序结束前打印它的信息。
 
 ```
 func main() {
@@ -33,7 +33,7 @@ func main() {
 }
 ```
 
-以下是一个更贴近实际的示例，我们定义一个函数并发地延缓执行一个事件。
+以下是一个更贴近实际的示例，我们定义一个并发函数延缓执行一个事件。
 
 ```
 // Publish 在给定时间向 stdout 输出文本，它会立即返回，不会阻塞
@@ -45,7 +45,7 @@ func Publish(text string, delay time.Duration) {
 }
 ```
 
-我们可能会这样使用 Publish 函数。
+可以这样使用 Publish 函数。
 
 ```
 func main() {
@@ -72,7 +72,7 @@ Ten seconds later: I'm leaving now.
 
 #### 实现
 
-Goroutine 是轻量的，开销比堆栈空间的分配小得多。堆栈开始的时候开销小，但是随着分配和释放的需求而逐渐增加。
+Goroutine 是轻量级的，开销比堆栈空间的分配小得多。堆栈开始的时候开销小，但是随着分配和释放的需求而逐渐增加。（这段话需要再斟酌一下）
 
 Goroutine 的内部实现类似于 coroutine，在多个系统线程间复用。如果一个 goroutine 在系统线程中阻塞，例如等待输入，在同一线程中的其他 goroutine 会迁移（到
 其他线程），因此它们可以继续运行。
