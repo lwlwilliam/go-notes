@@ -87,4 +87,4 @@ wait := Publish("important news", 2 * time.Minute)
 <- wait		// 阻塞直至文本被发布
 ```
 
-source code: [channel1.go](../src/channel1.go)、[channel1.go](../src/channel2.go)
+source code: [channel1.go](../src/channel1.go)、[channel2.go](../src/channel2.go)
