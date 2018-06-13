@@ -15,5 +15,29 @@ tag 内容不能在一般的程序中使用，只有 reflect 库可以访问它�
 结构体看起来就像 class 的简单形式，那么它的方法在哪里呢？Go 也有与 OO 语言方法意思基本一样的概念：Go 的方法是表示切类类型
 变量行为的函数，该类型被称为接收器。方法是特殊的函数。
 
-接收器类型几乎可以是任何类型，而不仅限于结构类型：任何类型都可以拥有方法，甚至于函数类型或者 int、bool、string 或者 array
-的别名类型。
+接收器类型几乎可以是任何类型，而不仅限于结构类型：甚至于函数类型或者 int、bool、string 或者 array
+的别名类型。接收器不能是接口类型，因为接口类型是抽象定义的，而方法是具体实现，如果非要这么做，会产生编译错误：`invalid receiver type...`。
+
+接口器也不能是指针类型，但可以是指向所有允许的类型指针。
+
+在 Go 中的(struct)类型和它的方法的结合体等同于面向对象中的类。它们最主要的不同点是 Go 中与类型绑定的方法并不聚合在一起，这些方法可以分布
+不同的源文件中，唯一的要求是它们必须在同一个 package 中。**由于方法和类型必须定义在同一个 package 中，这就是不能为 int、float 等类型定义方法
+的原因**。如果尝试为 int 定义方法会产生编译错误：`cannot define new methods on non-local type int`。有一种折中的实现方法，那就是为类型(int, 
+float, ...)定义别名，然后为该别名类型定义方法。或者把类型作为匿名类型嵌入 struct 中。当然，为别名类型定义的方法也只对该别名类型有效。
+
+方法的一般形式：
+
+
+```
+func (recv receiver_type) methodName(parameter_list) (return_value_list) {...}
+```
+
+
+调用方法：`recv.methodName()`。 如果 recv 是指针，会自动解引用。如果方法不需要 recv，可以用`_`代替它：
+
+
+```
+func (_ receiver_type) methodName(parameter_list) (return_value_list) {...}
+```
+
+recv 类似面向对象中的`this`或者`self`，但在 Go 中并没有为它指定关键字，如果喜欢的话，可以使用 self 或者 this 作为 接收器的变量名。
