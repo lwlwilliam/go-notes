@@ -8,26 +8,37 @@ package main
 
 import (
 	"fmt"
+	"bytes"
+	"time"
 )
 
-var freeList = make(chan *Buffer, 100)
-var serverChan = make(chan *Buffer)
+var freeList = make(chan *bytes.Buffer, 100)
+var serverChan = make(chan *bytes.Buffer)
 
 // client 算法
 func client() {
 	for {
-		var b *Buffer
+		var b *bytes.Buffer
 		// 如果可以获取缓冲就获取，否则重新分配
 		select {
 		case b = <- freeList:
 			// Got one; nothing more to do
+			fmt.Println("client b", b)
 		default:
 			// None free, so allocate a new one
-			b = new(Buffer)
+			b = new(bytes.Buffer)
 		}
 		loadInto(b)		// 从网络中读取下一条消息
 		serverChan <- b
 	}
+}
+
+func loadInto(b *bytes.Buffer) {
+	b.Write([]byte{'a'})
+}
+
+func process(b *bytes.Buffer) {
+//	fmt.Println(*b)
 }
 
 func server() {
@@ -42,4 +53,11 @@ func server() {
 			// Free list full, just carry on: the buffer is 'dropped'
 		}
 	}
+}
+
+func main() {
+	go server()
+	go client()
+
+	time.Sleep(1010 * time.Nanosecond)
 }
