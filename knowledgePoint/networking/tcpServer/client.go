@@ -35,13 +35,10 @@ func main() {
 		// send info to the server
 		_, err = conn.Write([]byte(trimmedClient + " says: " + trimmedInput))
 
-		// output := make([]byte, 512)
-		// _, err := conn.Read(output)
-
 		if err != nil {
-			fmt.Println("Error reading", err.Error())
+			fmt.Println("Error writing:", err.Error())
+		} else {
+			fmt.Println("Success writing.")
 		}
-
-		// fmt.Printf("Server received: %v", output)
 	}
 }

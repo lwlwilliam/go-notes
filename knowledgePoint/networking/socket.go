@@ -8,7 +8,7 @@ import (
 
 func main() {
 	var (
-		host = "javascript.ruanyifeng.com"
+		host = "www.apache.org"
 		port = "80"
 		remote = host + ":" + port
 		msg string = "GET / \n"
