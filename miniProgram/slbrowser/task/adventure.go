@@ -5,9 +5,10 @@ import (
 	"regexp"
 	"sync"
 	"strconv"
-	"fmt"
 	url2 "net/url"
 	"../tool"
+	"log"
+	"fmt"
 )
 
 type heroInfo struct {
@@ -20,6 +21,7 @@ type heroInfo struct {
 // 匹配英雄并分配任务
 func HeroTask(heroList []byte, config tool.Config, done chan bool) {
 	var wg sync.WaitGroup
+	log.Println("task.HeroTask: come in")
 
 	// 找出英雄名称、英雄 ID、所在城市 ID
 	heroRegex, _ := regexp.Compile(`class="t_color03"><strong>([^<]+)(.|\n)*?view_mission_city\.alc\?[^&]+&cityId=(\d+)(.|\n)*?showSendHero\((\d+)`)
@@ -83,7 +85,13 @@ func adventure(hero heroInfo, queue chan bool, wg *sync.WaitGroup, config tool.C
 	params := u.Encode()
 
 	res := tool.Request("POST", config.AdventureURL, config.Cookie, params)
-	fmt.Println(string(res))
+
+	if string(res) == "1" {
+		log.Println(hero.Name, "冒险成功")
+	} else {
+		log.Println(hero.Name, "冒险失败")
+		fmt.Println(string(res))
+	}
 
 	queue <- true
 	wg.Done()

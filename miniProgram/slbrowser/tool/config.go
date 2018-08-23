@@ -14,10 +14,11 @@ const (
 
 // config 格式
 type Config struct {
-	HeroListURL		string	`json:heroListURL`
-	AdventureURL	string	`json:adventureURL`
-	EquipmentURL	string	`json:equipmentURL`
-	Cookie			string	`json:cookie`
+	HeroListURL			string	`json:heroListURL`
+	AdventureURL		string	`json:adventureURL`
+	EquipmentURL		string	`json:equipmentURL`
+	SellEquipmentURL	string 	`json:sellEquipmentURL`
+	Cookie				string	`json:cookie`
 }
 
 // adventure 配置格式
