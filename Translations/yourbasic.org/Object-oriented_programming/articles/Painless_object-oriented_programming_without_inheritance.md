@@ -1,4 +1,4 @@
-### 继承与面向对象
+### 无继承的无痛面向对象编程
 
 > 原文：[https://yourbasic.org/golang/inheritance-object-oriented/](https://yourbasic.org/golang/inheritance-object-oriented/)
 
