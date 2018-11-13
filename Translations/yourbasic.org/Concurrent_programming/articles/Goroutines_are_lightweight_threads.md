@@ -72,7 +72,9 @@ Ten seconds later: I'm leaving now.
 
 #### 实现
 
-** TODO: 这段死活翻译不出来。。。看来知识储备还差远 **
+
+**TODO: 这段死活翻译不出来。。。看来知识储备还差得远**
+
 
 ```
 Goroutines are lightweight, costing little more than the allocation of stack space. The stacks start small and grow by allocating and freeing heap storage as required.
