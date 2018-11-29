@@ -1,7 +1,6 @@
 // 装备包
 package task
 import (
-	"../tool"
 	"sync"
 	"log"
 	"regexp"
@@ -9,6 +8,7 @@ import (
 	"bytes"
 	"net/url"
 	"fmt"
+	"github.com/lwlwilliam/Golang/miniProgram/slbrowser/tool"
 )
 
 // 装备类型

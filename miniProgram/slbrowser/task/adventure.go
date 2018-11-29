@@ -6,9 +6,9 @@ import (
 	"sync"
 	"strconv"
 	url2 "net/url"
-	"../tool"
 	"log"
 	"fmt"
+	"github.com/lwlwilliam/Golang/miniProgram/slbrowser/tool"
 )
 
 type heroInfo struct {
