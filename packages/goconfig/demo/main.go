@@ -6,16 +6,57 @@ import (
 	"log"
 	"os"
 	"github.com/lwlwilliam/goconfig"
+	"io"
 )
 
 func main() {
-	configs, err := loadConfigFile("testdata/conf.ini")
-	fatalErr(err)
+	//tmpName := path.Join(os.TempDir(), "goconfig", fmt.Sprintf("%d", time.Now().Nanosecond()))
+	//fmt.Println(tmpName)
 
-	getValue(configs)
-	delete(configs)
-	reload(configs)
-	transform(configs)
+	//configs, err := loadConfigFile("testdata/conf.ini")
+	//configs, err := loadFromData()
+
+	dir, err := os.Getwd()
+	fatalErr(err)
+	reader, err := os.Open(dir+ "/testdata/conf.ini")
+	fatalErr(err)
+	configs, err := loadFromReader(reader)
+	// 这里 LoadFromReader 时不能追加
+	//configs.AppendFiles("testdata/conf2.ini")
+
+	fatalErr(err)
+	for _, v := range configs.GetSectionList() {
+		fmt.Println(v, ": ")
+		section, _ := configs.GetSection(v)
+
+		for k, v := range section {
+			fmt.Println(k, v)
+		}
+	}
+
+	//getValue(configs)
+	//delete(configs)
+	//reload(configs)
+	//transform(configs)
+
+
+}
+
+// 从 io.Reader 获取配置
+func loadFromReader(in io.Reader) (*goconfig.ConfigFile, error) {
+	fmt.Println("==================== loadFromReader")
+	configs, err := goconfig.LoadFromReader(in)
+
+	return configs, err
+}
+
+// 从输入数据中获取配置
+func loadFromData() (*goconfig.ConfigFile, error) {
+	fmt.Println("==================== loadFromData")
+	data := []byte("[test]\nhaha=abc")
+	configs, err := goconfig.LoadFromData(data)
+
+	return configs, err
 }
 
 // 可以加载一个或多个文件，返回一个类型为 ConfigFile 的指针
