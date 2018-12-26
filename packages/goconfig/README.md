@@ -35,4 +35,34 @@ func LoadFromReader(in io.Reader) (c *ConfigFile, err error)
 
 // 当配置文件改变时使用该方法进行刷新
 func (c *ConfigFile) Reload() (err error)
+
+
+// 刷新从内存中获取的配置
+func (c *ConfigFile) ReloadData(in io.Reader) (err errpr)
+
+
+// 往 ConfigFile 中追加文件，追加后会自动调用 Reload 方法，无需额外调用
+func (c *ConfigFile) AppendFiles(files ...string) error
+```
+
+#### write.go: 写配置
+
+```
+// 保存配置。把 ConfigFile 内容写到 io.Writer 中
+func SaveConfigData(c *ConfigFile, out io.Writer) (err error)
+
+
+// 把配置写到文件系统中
+func SaveConfigFile(c *ConfigFile, filename string) (err error)
+```
+
+#### conf.go: 配置操作
+
+```go
+// 首先定义所需的常量，以及根据操作系统确定换行符等
+
+
+type ConfigFile struct {
+    
+}
 ```
