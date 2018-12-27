@@ -58,11 +58,55 @@ func SaveConfigFile(c *ConfigFile, filename string) (err error)
 
 #### conf.go: 配置操作
 
-```go
+```
 // 首先定义所需的常量，以及根据操作系统确定换行符等
 
 
+// ConfigFile 表示 ini 格式的配置文件
 type ConfigFile struct {
+    lock            sync.RWMutex                    // Go map is not safe.
+    fileNames       []string                        // Support mutil-files.
+    data            map[string]map[string]string    // Section -> key : value
     
+    // List can keep sections and keys in order.
+    sectionList     []string                        // Section name list.
+    keyList         map[string]string               // Section -> Key name list
+    
+    sectionComments map[string]string               // Sections comments.
+    keyComments     map[string]map[string]string    // Keys comments.
+    BlockMode       bool                            // Indicates whether use lock or not.
 }
+
+
+// 初始化一个 ConfigFile 变量
+func newConfigFile(fileNames []string) *ConfigFile
+
+
+// 添加一个 section-key-value 到配置中，需要先判断 section 和 key 是否已存在，注意要锁
+func (c *ConfigFile) SetValue(section, key, value string) bool
+
+
+// 删除指定 section 中的 key 值，先判断 section 和 key 是否已存在。注意要锁
+func (c *ConfigFile) DeleteKey(section, key string) bool
+
+
+// 获取 section 中的 key 值。先判断 section 和 key 是否存在。注意要锁。如果不存在，再判断是否为子 section
+// TODO: 有待深入了解 ini 格式
+func (c *ConfigFile) GetValue(section, key string) (string, error)
+
+
+// 返回 value 对应的布尔类型值
+func (c *ConfigFile) Bool(section, key string) (bool, error)
+
+
+// 返回 value 对应的 Float64 类型值
+func (c *ConfigFile) Float64(section, key string) (float64, error)
+
+
+// 返回 value 对应的 Int 类型值
+func (c *ConfigFile) Int(section, key string) (int, error)
+
+
+// 返回 value 对应的 Int64 类型值
+func (c *ConfigFile) Int64(section, key string) (int64, error)
 ```
