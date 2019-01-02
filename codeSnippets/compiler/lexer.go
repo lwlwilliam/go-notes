@@ -1,5 +1,5 @@
 // 参照 https://play.rust-lang.org/?gist=070c3b6b985098a306c62881d7f2f82c&version=stable&mode=debug&edition=2015 所写的一个词法分析器 demo
-package complier
+package main
 
 import (
 	"unicode"
