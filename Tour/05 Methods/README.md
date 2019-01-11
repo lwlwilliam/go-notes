@@ -10,18 +10,22 @@
 
 [methods-continued.go](methods-continued.go)
 
+方法仅仅是一个拥有接收者的函数而已。
+
 你可以对包中的`任意`类型定义任意方法，而不仅仅是针对结构体。
 
-但是，不能对来自其他包的类型或基础类型定义方法。
+只能为同一个包里的类型定义方法，也就是说不能对来自其他包的类型或基础类型定义方法。类型及其对应方法的定义必须在同一个包中。
 
 > 接收者为指针的方法
 
 [methods-with-pointer-receivers.go](methods-with-pointer-receivers.go)
 
-方法可以与命名类型或命名类型的指针关联。
+方法可以与命名类型或命名类型的指针关联，也就是说接收者的类型可以为`*T`或`T`，其中`T`不能为指针类型。
 
-刚刚看到两个`Abs`方法，一个是在`*Vertex`指针类型上，而另一个在`MyFloat`值类型上。有两个原因需要使用指针接收者。
-首先避免在每个方法调用中拷贝值（如果值类型是大的结构体的话更有效率）。其次，方法可以修改接收者指向的值。
+刚刚看到两个`Abs`方法，一个是在`*Vertex`指针类型上，而另一个在`MyFloat`值类型上。有两个原因需要使用指针接收者：
+
+1.  首先避免在每个方法调用中拷贝值（如果值类型是大型结构体的话更有效率）；
+2.  其次，方法可以修改接收者指向的值。
 
 尝试修改`Abs`的定义，同时`Scale`方法使用`Vertex`代替`*Vertex`作为接收者。
 
@@ -34,23 +38,38 @@
 
 [intefaces.go](interfaces.go)
 
-接口类型是由一组方法定义的集合。
+接口类型是由一组方法签名定义的集合。
 
 接口类型的值可以存放实现这些方法的任何值。
 
 注意：例子代码的 22 行存在一个错误。由于`Abs`只定义在`*Vertex`（指针类型）上，所以`Vertex`（值类型）不满足`Abser`。
 
+接口跟接收者不一样，接收者可以根据调用的值自动转换为值类型或者指针类型，而接口不会自动转换，因此需要注意。
+
 > 隐式接口
 
 [interfaces-are-satisfied-implicitly.go](interfaces-are-satisfied-implicitly.go)
 
-类型通过实现那些方法来实现接口。没有显式声明的必要；所以也就没有关键字`implements`。
+类型通过实现方法来实现接口，只要类型实现了所有的接口方法，就相当于实现了该接口，因此没有显式声明的必要；所以也就没有关键字`implements`。
 
 隐式接口解耦了实现接口的包和定义接口的包：互不依赖。
 
-此，也就无需要每一个实现上增加新的接口名称，这样同时也鼓励了明确的接口定义。
+因此，也就不需要每一个实现上增加新的接口名称，这样同时也鼓励了明确的接口定义。
 
 [包io](http://golang.org/pkg/io/)定义了`Reader`和`Writer`；其实不一定要这么做。
+
+> interface 值
+
+interface 值可以认为是一个值和具体类型的元组`(value, type)`。一个 interface 值保存了指定底层类型的值。调用 interface 值的方法时就会执行
+该值的底层类型中的同名方法。
+
+[interface-value.go](interface-values.go)
+
+如果 interface 的具体值为 nil，调用方法时就会使用 nil 接收者。在其它语言中这会导致空指针异常，但在 Go 中优雅地处理 nil 接收者调用是很平常的事情。
+
+注意，具体值为 nil 的 interface 值本身并不为 nil。
+
+[interface-values-with-nil.go](interface-values-with-nil.go)
 
 > Stringers
 
