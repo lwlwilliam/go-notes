@@ -109,7 +109,7 @@ type error interface {
 
 (与`fmt.Stringer`类似，`fmt`包在输出时也会试图匹配`error`。)
 
-通常函数会返回一个`error`值，调用的它的代码应当判断这个错误是否等于`nil`，来进行错误处理。
+通常函数会返回一个`error`值，调用它的代码时应当通过判断这个错误是否等于`nil`来进行错误处理。
 
 ```go
 i, err := strconv.Atoi("42")
@@ -120,11 +120,13 @@ if err != nil {
 fmt.Println("Converted integer: ", i)
 ```
 
-`error`为`nil`时表示成功：非`nil`的`error`表示错误。
+`error`为`nil`时表示成功；非`nil`的`error`表示错误。
 
-> 练习：错误(未完待续：TODO)
+> 练习：错误
 
 [exercise-errors.go](exercise-errors.go)
+
+注意：以上代码中如果在 Error 方法中调用`fmt.Sprint(e)`将会死循环。可以通过先转换 e 的类型来避免：`fmt.Sprint(floag64(e))`。
 
 > Readeres
 
