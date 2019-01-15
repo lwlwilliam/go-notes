@@ -175,7 +175,7 @@ fmt.Println("Converted integer: ", i)
 
 [reader.go](reader.go)
 
-`io`包指定了`io.Reader`接口，它表示从数据流结尾读取。
+`io`包指定了`io.Reader`接口，该接口表示数据流的读取端。
 
 `Go`标准库包含了这个接口的许多实现，包括文件、网络连接、压缩、加密等等。
 
