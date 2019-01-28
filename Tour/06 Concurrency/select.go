@@ -1,8 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
-func finonacci(c, quit chan int) {
+func fibonacci(c, quit chan int) {
 	x, y := 0, 1
 	for {
 		select {
@@ -11,6 +14,9 @@ func finonacci(c, quit chan int) {
 		case <- quit:
 			fmt.Println("quit")
 			return
+		default:
+			fmt.Println(".")
+			time.Sleep(500 * time.Nanosecond)
 		}
 	}
 }
