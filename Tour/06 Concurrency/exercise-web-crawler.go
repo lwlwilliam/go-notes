@@ -1,39 +1,71 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 type Fetcher interface {
 	// Fetch 方法返回 URL body 以及一个保存页面中 URL 的 slice
 	Fetch(url string) (body string, urls []string, err error)
 }
 
-func Crawl(url string, depth int, fetcher Fetcher) {
-	// TODO: 并行获取 url
-	// TODO: 不重复获取 url 内容
+type URLs struct {
+	mux sync.Mutex
+	data map[string]string
+}
+
+var urlData URLs
+
+// 不重复保存内容，由于 map 是非并发安全的，所以要加锁
+func (u URLs) Add(url string, body string) {
+	u.mux.Lock()
+
+	if _, ok := u.data[url]; !ok {
+		u.data[url] = body
+	}
+
+	u.mux.Unlock()
+}
+
+func Crawl(url string, depth int, fetcher Fetcher, wg *sync.WaitGroup) {
+	defer wg.Done()
 
 	if depth <= 0 {
 		return
 	}
 
 	body, urls, err := fetcher.Fetch(url)
+
 	if err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 		return
 	}
 
-	fmt.Printf("found: %s %q\n", url, body)
+	//fmt.Printf("found: %s %q\n", url, body)
+	urlData.Add(url, body)
 
+	// 并发获取
 	for _, u := range urls {
-		Crawl(u, depth - 1, fetcher)
+		wg.Add(1)
+		go Crawl(u, depth - 1, fetcher, wg)
 	}
-
-	fmt.Println()
 
 	return
 }
 
 func main() {
-	Crawl("https://golang.org/", 3, fetcher)
+	var wg sync.WaitGroup
+
+	urlData.data = make(map[string]string)
+
+	wg.Add(1)
+	Crawl("https://golang.org/", 2, fetcher, &wg)
+	wg.Wait()
+
+	for k, v := range urlData.data {
+		fmt.Println(k, v)
+	}
 }
 
 // fakeFetcher 是返回封装结果的 Fetcher
@@ -44,6 +76,7 @@ type fakeResult struct {
 	urls []string
 }
 
+// 模拟获取网页 body 及网页中的链接
 func (f fakeFetcher) Fetch(url string) (string, []string, error) {
 	if res, ok := f[url]; ok {
 		return res.body, res.urls, nil
@@ -52,7 +85,7 @@ func (f fakeFetcher) Fetch(url string) (string, []string, error) {
 	return "", nil, fmt.Errorf("not found: %s", url)
 }
 
-// 虚拟数据
+// 模拟数据
 var fetcher = fakeFetcher{
 	"https://golang.org/": &fakeResult{
 		"The Go Programming Language",
