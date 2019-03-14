@@ -8,7 +8,7 @@ import (
 	url2 "net/url"
 	"log"
 	"fmt"
-	"github.com/lwlwilliam/Golang/miniProgram/slbrowser/tool"
+	"github.com/lwlwilliam/Golang/codeSnippets/slbrowserr/tool"
 )
 
 type heroInfo struct {

@@ -3,7 +3,7 @@ package main
 
 import (
 	"net/http"
-	"github.com/lwlwilliam/Golang/miniProgram/simpleBlockChain/core"
+	"github.com/lwlwilliam/Golang/codeSnippets/simpleBlockChainn/core"
 	"encoding/json"
 	"io"
 )

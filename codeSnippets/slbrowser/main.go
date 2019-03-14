@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/lwlwilliam/Golang/miniProgram/slbrowser/tool"
-	"github.com/lwlwilliam/Golang/miniProgram/slbrowser/task"
+	"github.com/lwlwilliam/Golang/codeSnippets/slbrowserr/tool"
+	"github.com/lwlwilliam/Golang/codeSnippets/slbrowserr/task"
 )
 
 func main() {
