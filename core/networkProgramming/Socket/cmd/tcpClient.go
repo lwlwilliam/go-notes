@@ -1,4 +1,4 @@
-// socket 实现简单的 http 客户端
+// 模拟 http get 请求
 package main
 
 import (
