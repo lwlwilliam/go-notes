@@ -25,6 +25,7 @@ func main() {
 			continue
 		}
 		daytime := time.Now().String()
+		daytime = "HTTP/1.1 200 OK\r\nLocation: https://github.com"
 		conn.Write([]byte(daytime))
 		conn.Close()
 	}
