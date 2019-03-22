@@ -18,11 +18,11 @@ func main() {
 
 	// 获取 tcp 地址
 	tcpAddr, err := net.ResolveTCPAddr("tcp", socket)
-	checkError(err)
+	checkError(err, "resolve addr")
 
 	// 建立 tcp 连接
 	conn, err := net.DialTCP("tcp", nil, tcpAddr)
-	checkError(err)
+	checkError(err, "connect")
 
 	// 写入 http 请求报文
 	_, err = conn.Write([]byte(
