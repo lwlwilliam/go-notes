@@ -1,6 +1,6 @@
 // socket 实现 http 客户端
 // 串行指定读取客户端返回内容大小，不推荐使用
-package HTTP
+package main
 
 import (
 	"fmt"

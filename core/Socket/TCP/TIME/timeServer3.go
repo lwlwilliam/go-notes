@@ -1,7 +1,7 @@
 // 模拟时间服务器
 // 支持多并发
 // 可以处理客户端实际请求内容
-package TIME
+package main
 
 import (
 	"fmt"

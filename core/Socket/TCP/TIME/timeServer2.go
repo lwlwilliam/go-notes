@@ -1,7 +1,7 @@
 // 模拟时间服务器
 // 支持多并发
 // 可以用 tcpClient.go 或 tcpClient2.go 来测试
-package TIME
+package main
 
 import (
 	"fmt"

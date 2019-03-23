@@ -1,6 +1,6 @@
 // socket 实现 http 客户端
 // io 读取 http 响应
-package HTTP
+package main
 
 import (
 	"fmt"

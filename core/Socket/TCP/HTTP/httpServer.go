@@ -1,5 +1,5 @@
 // socket 实现的简单 http 服务器
-package HTTP
+package main
 
 import (
 	"log"

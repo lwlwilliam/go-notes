@@ -1,7 +1,7 @@
 // echo 服务器
 // 注册并监听一个端口，阻塞在 accept 操作，并等待客户端连接，accept 调用返回一个连接对象
 // echo 服务非常简单，把客户端的请求数据写回到客户端，就像回声一样，直到某一方关闭连接
-package ECHO
+package main
 
 import (
 	"flag"

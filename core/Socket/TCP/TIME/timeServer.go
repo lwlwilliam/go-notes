@@ -1,7 +1,7 @@
 // 模拟时间服务器
 // 单任务
 // 可以用 tcpClient.go 或 tcpClient2.go 来测试
-package TIME
+package main
 
 import (
 	"fmt"

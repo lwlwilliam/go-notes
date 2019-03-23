@@ -1,6 +1,6 @@
 // socket 实现 http 客户端
 // 按行读取
-package HTTP
+package main
 
 import (
 	"bufio"
