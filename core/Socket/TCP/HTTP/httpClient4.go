@@ -1,13 +1,13 @@
 // socket 实现 http 客户端
-// 按行读取
-package main
+// io 读取 http 响应
+package HTTP
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"log"
 	"net"
+	"os"
 	"reflect"
 )
 
@@ -29,12 +29,6 @@ func main()  {
 	}
 	fmt.Println("size:", n)
 
-	r := bufio.NewReader(conn)
-	for {
-		line, err := r.ReadString('\n')
-		if err == io.EOF {
-			conn.Close()
-		}
-		fmt.Print(line)
-	}
+	io.Copy(os.Stdout, conn)
+	conn.Close()
 }

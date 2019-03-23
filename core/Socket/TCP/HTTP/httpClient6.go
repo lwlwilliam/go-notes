@@ -1,5 +1,5 @@
 // 模拟 http get 请求
-package main
+package HTTP
 
 import (
 	"fmt"

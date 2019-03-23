@@ -1,7 +1,7 @@
 // 模拟时间服务器
-// 支持多并发
+// 单任务
 // 可以用 tcpClient.go 或 tcpClient2.go 来测试
-package main
+package TIME
 
 import (
 	"fmt"
@@ -11,9 +11,12 @@ import (
 )
 
 func main() {
-	service := ":7777"
+	// 创建 tcp 地址
+	service := ":6666"
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 	checkError(err)
+
+	// 监听 tcp 地址
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	checkError(err)
 	for {
@@ -21,14 +24,11 @@ func main() {
 		if err != nil {
 			continue
 		}
-		go handleClient(conn)
+		daytime := time.Now().String()
+		daytime = "HTTP/1.1 200 OK\r\nLocation: https://github.com"
+		conn.Write([]byte(daytime))
+		conn.Close()
 	}
-}
-
-func handleClient(conn net.Conn) {
-	defer conn.Close()
-	daytime := time.Now().String()
-	conn.Write([]byte(daytime))
 }
 
 func checkError(err error)  {

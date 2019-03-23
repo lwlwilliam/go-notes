@@ -1,6 +1,6 @@
 // socket 实现 http 客户端
 // 按照指定大小循环读取
-package main
+package HTTP
 
 import (
 	"fmt"
