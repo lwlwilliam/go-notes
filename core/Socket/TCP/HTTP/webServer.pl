@@ -32,7 +32,6 @@ while(1) {
 		$line =~ s/\r//;
 		$line =~ s/\n//;
 		if ($line =~ /^\./) { last; }
-		print $line. "\r\n";
 		print C $line . "\r\n";
 	}
 	close(C);
