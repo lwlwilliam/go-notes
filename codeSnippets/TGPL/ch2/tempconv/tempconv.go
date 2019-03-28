@@ -1,5 +1,7 @@
-// tempconv 包用来计算摄氏度与华氏度
+// tempconv 包用来转换摄氏度与华氏度
 package tempconv
+
+import "fmt"
 
 type Celsius float64 // 摄氏温度
 type Fahrenheit float64 // 华氏温度
@@ -10,10 +12,10 @@ const (
 	BoilingC Celsius = 100 // 沸水温度
 )
 
-func CToF(c Celsius) Fahrenheit {
-	return Fahrenheit(c * 9 / 5 + 32)
+func (c Celsius) String() string {
+	return fmt.Sprintf("%gºC", c)
 }
 
-func FToC(f Fahrenheit) Celsius {
-	return Celsius((f - 32) * 5 / 9)
+func (f Fahrenheit) String() string {
+	return fmt.Sprintf("%gºF", f)
 }
