@@ -34,7 +34,8 @@ func main() {
 	result, err := ioutil.ReadAll(conn)
 	checkError(err, "read from conn")
 
-	fmt.Println(string(result))
+	//fmt.Println(string(result))
+	fmt.Println(result)
 
 	os.Exit(0)
 }
