@@ -87,3 +87,101 @@ func Contains(s, substr string) bool {
 }
 ```
 
+### 常量
+
+常量表达式的值在编译期计算，而不是在运行期。每种常量的潜在类型都是基础类型：boolean，string 或
+数字。
+
+常量的值不可修改，这样可以防止在运行期被意外或恶意的修改。
+
+所有常量的运处都可以在编译期完成，这样可以减少运行时的工作，也方便其他编译优化。当操作数是常量时，
+一些运行时的错误也可以在编译时被发现，例如整数除零，字符串索引越界，任何导致无效浮点数的操作等。
+
+常量间的所有算术运算，逻辑运算和比较运算的结果也是常量，对常量的类型转换操作或以下函数调用都是
+返回常量结果：len, cap, real, imag, complex 和 unsafe.Sizeof。
+
+因为它们的值是在编译期就确定的，因此常量可以是构成类型的一部分，例如用于指定数组类型的长度：
+
+```
+const IPv4Len = 4
+
+// parseIPv4 parses an IPv4 address (d.d.d.d).
+func parseIPv4(s string) IP {
+    var p [IPv4Len]byte
+    // ...
+}
+```
+
+一个常量的声明也可以包含一个类型和一个值，但是如果没有显式指明类型，那么将从右边的表达式推断
+类型。在下面的代码中，time.Duration 是一个命名类型，底层类型是 int64，time.Minute 是对
+应类型的常量。下面声明的两个常量都是 time.Duration 类型。
+
+```
+const noDelay time.Duration = 0
+const timeout = 5 * time.Minute
+fmt.Printf("%T %[1]v\n", noDelay)       // "time.Duration 0"
+fmt.Printf("%T %[1]v\n", timeout)       // "time.Duration 5m0s"
+fmt.Printf("%T %[1]v\n", time.Minute)   // "time.Duration 1m0s"
+```
+
+如果是批量声明的常量，除了第一个外其它的常量右边的初始化表达式都可以省略，如果省略初始化表达式
+则表示使用前面常量的初始化表达式写法，对应的常量类型也一样的。例如：
+
+```
+const (
+    a = 1
+    b
+    c = 2
+    d
+)
+
+fmt.Println(a, b, c, d) // "1 1 2 2"
+```
+
+#### iota 常量生成器
+
+iota 常量生成器用于生成一组以相似规则初始化的常量，但是不用每行都写一遍初始化表达式。在一个
+const 声明语句中，在第一个声明的常量所在的行，iota 将会被置为 0，然后在每一个有常量声明的
+行加一。以下是来自 time 包的例子，首先定义了一个 Weekday 命名类型，然后为一周的每天定义了
+一个常量，从周日 0 开始。在其它编程语言中，这种类型一般被称为枚举类型。
+
+```
+type Weekday int
+
+const (
+    Sunday Weekday = iota
+    Monday
+    Tuesday
+    Wednesday
+    Thursday
+    Friday
+    Saturday
+)
+```
+
+周日将对应 0，周一为 1，如此等等。
+
+也可以在复杂的常量表达式中使用 iota，下面是来自 net 包的例子，用于给一个元符号整数的最低 5
+bit 的每个 bit 指定一个名字：
+
+```
+type Flags int
+
+const (
+    FlagUp Flags = 1 << iota    // 
+    FlagBroadcast
+    FlagLoopback
+    FlagPointToPoint
+    FlagMulticast
+)
+```
+
+#### 无类型常量
+
+Go 语言的常量有个不同寻常之处。虽然一个常量可以有任意一个确定的基础类型，但是许多常量并没有一个
+明确的基础类型。编译器为这些没有明确的基础类型的数字常量提供比基础类型更高精度的算术运算：可以
+认为至少有 256bit 的运算精度。这里有六种未明确类型的常量类型，分别是无类型的布尔型，无类型的
+整数，无类型的字符，无类型的浮点数，无类型的复数，无类型的字符串。
+
+通过延迟明确常量的具体类型，无类型的常量不仅可以提供更高的运算精度，而且可以直接用于更多的表达
+式而不需要显式的类型转换。

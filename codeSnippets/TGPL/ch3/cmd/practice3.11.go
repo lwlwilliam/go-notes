@@ -6,5 +6,5 @@ import (
 )
 
 func main()  {
-	fmt.Println(comma.Comma("abjiwoerjwoerjweira"))
+	fmt.Println(comma.Comma3("1234567890.123456789"))
 }
