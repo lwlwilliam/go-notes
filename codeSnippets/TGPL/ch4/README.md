@@ -64,3 +64,50 @@ fmt.Println(a == b, a == c, b == c) // true, false, false
 d := [3]int{1, 2}
 fmt.Println(a == d) // compile error: cannot compare [2]int == [3]int
 ```
+
+### Slice
+
+Slice（切片）代表变长的序列，序列中每个元素都有相同的类型。slice 的语法和数组很像，只是没有
+固定长度而已。
+
+数组和 slice 之间有着紧密的联系。一个 slice 是一个轻量级的数据类型，提供了访问数组子序列（
+或者全部）元素的功能，而且 slice 的底层确实引用一个数组对象。一个 slice 由三个部分构成：
+指针，长度和容量。指针指向第一个 slice 元素对应的底层数组元素的地址，要注意的是 slice 的第
+一个元素并不一定就是数组的第一个元素。长度对应 slice 中元素的数目；长度不能超过容量，容量
+一般是从 slice 的开始位置到底层数组的结尾位置。
+
+多个 slice 之间可以共享底层的数据，并且引用的数组部分区间可能重叠。
+
+```
+months := [...]string{1: "January", 2: "February", 3: "March", 4: "April", 
+                    5: "May", 6: "June", 7: "July", 8: "August", 9: "September",
+                    10: "October", 11: "November", 12: "December"}
+```
+
+以上数组第 0 个元素为空字符串。下面定义表示第二季度和北方夏天月份的 slice，它们有重叠部分：
+
+```go
+Q2 := months[4:7]
+summer := months[6:9]
+fmt.Println(Q2)     // ["April" "May" "June"]
+fmt.Println(summer) // ["June" "July" "August"]
+```
+
+两个 slice 之间的关系如下图：
+
+![slice](assets/20190406213449.png)
+
+如果切片操作超出 cap(s) 的上限将导致一个 panic 异常，但是超出 len(s) 则是意味着扩展了
+slice，因为新 slice 的长度会变大：
+
+```go
+fmt.Println(summer[:20])    // panic: out of range
+
+endlessSummer := summer[:5] // extend a slice (within capacity)
+fmt.Println(endlessSummer)  // "[June July August September October]"
+```
+
+字符串的切片操作和 []byte 字节类型切片的切片操作是类似的。都写作 x[m:n]，并且都是返回一个
+原始字节系列的子系列，底层都是共享之前的底层数组，因此这种操作都是常量时间复杂度。x[m:n]
+切片操作对于字符串则生成一个新字符串，如果 x 是 []byte 的话则生成一个新的 []byte。
+
