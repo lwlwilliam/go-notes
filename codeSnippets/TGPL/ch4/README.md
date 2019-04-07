@@ -111,3 +111,44 @@ fmt.Println(endlessSummer)  // "[June July August September October]"
 原始字节系列的子系列，底层都是共享之前的底层数组，因此这种操作都是常量时间复杂度。x[m:n]
 切片操作对于字符串则生成一个新字符串，如果 x 是 []byte 的话则生成一个新的 []byte。
 
+和数组不同的是，slice 之间不能比较，因此不能使用 == 操作符来判断两个 slice 是否含有全部相等元素。
+不过标准库提供了高度优化的 bytes.Equal 函数来判断两个字节型 slice 是否相等（[]byte），但是对于
+其他类型的 slice，必须自己展开每个元素进行比较：
+
+```go
+func equal(x, y []string) bool {
+	if len(x) != len(y) {
+		return false
+	}
+	
+	for i := range x {
+		if x[i] != y[i] {
+			return false
+		}
+	}
+	return true
+}
+```
+
+由于一个 slice 的元素是间接引用的，甚至可以包含自身。虽然有很多办法处理这种情形，但是没有一个是简
+单有效的。另外，一个固定的 slice 值（指 slice 本身的值，不是元素的值）在不同的时刻可能包含不同的
+元素，因为底层数组的元素可能会被修改。
+
+slice 唯一合法的比较操作是和 nil 比较。一个零值的 slice 等于 nil。一个 nil 值的 slice 并没有
+底层数组。一个 nil 值的 slice 的长度和容量都是 0，但是也有非 nil 值的 slice 的长度和容量也是 0
+的，例如 []int{} 或 make([]int, 3)[3:]。与任意类型的 nil 值一样，可以用 []int(nil) 类型转
+换表达式来生成一个对应类型 slice 的 nil 值。
+
+```go
+var s []int     // len(s) == 0, s == nil
+s = nil         // len(s) == 0, s == nil
+s = []int(nil)  // len(s) == 0, s == nil
+s = []int{}     // len(s) == 0, s != nil
+```
+
+如果需要测试一个 slice 是否是空的，使用 len(s) == 0 来判断，而不应该用 s == nil 来判断。除了和
+nil 相等比较外，一个 nil 值的 slice 的行为和其它任意 0 长度的 slice 一样，例如 reverse(nil) 
+也是安全的。除了文档已经明确说明的地方，所有的 Go 语言函数应该以相同的方式对待 nil 值的 slice 和
+0 长度的 slice。
+
+
