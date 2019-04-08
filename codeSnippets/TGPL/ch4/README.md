@@ -169,3 +169,50 @@ type IntSlice struct {
 和 value。K 对应的 key 必须是支持 == 比较运算符的数据类型，所以 map 可以通过测试 key 是否相等来
 判断是否已经存在。`虽然浮点数类型也是支持相等运算符比较的，但是将浮点数用做 key 类型则是一个坏的想法，
 最坏的情况是可能出现的 NaN 和任何浮点数都不相等。对于 V 对应的 value 数据类型则是没有任何限制。
+
+map 类型的零值是 nil，也就是没有引用任何哈希表。
+
+```go
+var ages map[string]int
+fmt.Println(ages == nil)    // "true"
+fmt.Println(len(ages) == 0) // "true"
+```
+
+map 上的大部分操作，包括查找，删除，len 和 range 循环都可以安全工作在 nil 值的 map 上，它们的行
+为和一个空的 map 类似。但是向一个 nil 值的 map 存入元素将导致一个 panic 异常：
+
+```go
+ages["carol"] = 21  // panic: assignment to entry in nil map
+```
+
+在向 map 存数据前必须先创建 map。创建 map 的方式有以下几种：
+
+```go
+// make 创建 map
+ages := make(map[string]int)
+
+// map 字面值语法创建 map
+ages := map[string]int{}
+
+// 还可以在创建时指定一些最初的 key/value
+ages := map[string]int{
+	"alice":    31,
+	"charlie":  34,
+}
+```
+
+通过 key 作为索引下标来访问 map 将产生一个 value。如果 key 在 map 中是存在的，那么将得到与 key
+对应的 value；如果 key 不存在，那么将得到 value 对应类型的零值。然而，如果存在一个 value 为零
+值的 key/value 对时，无法判断该元素已存在。这时候可以如下测试：
+
+```go
+age, ok := ages["bob"]
+if !ok {
+	/* "bob" is not a key in this map; age == 0 */
+}
+```
+
+和 slice 一样，map 之间也不能进行相等比较；唯一的例外是和 nil 进行比较。
+
+Go 语言中并没有提供一个 set 类型，但是 map 中的 key 也是不相同的，可以用 map 实现类似 set 的
+功能，如[dedup.go](./cmd/dedup.go)。
