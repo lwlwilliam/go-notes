@@ -263,4 +263,129 @@ employeeOfTheMonth.Position += " (proactive team player)"
 (*employeeOfTheMonth).Positioin += " (proactive team player)"
 ```
 
+下面的 EmployeeByID 函数将根据给定的员工 ID 返回对应的员工信息结构体的指针。可以使用点操作符来访问它里面的成员：
 
+```go
+func EmployeeByID(id int) *Employee { /* ... */ }
+fmt.Println(EmployeeByID(dilbert.ManagerID).Position)   // "Pointy-haired boss"
+
+id := dilbert.ID
+EmployeeByID(id).Salary = 0 // fired for ... no real reason
+```
+
+`EmployeeByID(id).Salary = 0`通过 EmployeeByID 返回的结构体指针更新了 Employee 结构体的成员。如果将
+EmployeeByID 函数的返回值从 `*Employee`指针类型改为 Employee 值类型，那么更新语句将不能编译通过，因为在赋值
+语句的左边并不确定是一个变量，也就是说调用函数返回的是值，并不是一个可取地址的变量，具体可见[Employee.go](./cmd/Employee.go)。
+
+一个命名为 S 的结构体类型将不能再包含 S 类型的成员：因为一个聚合的值不能包含它自身。该限制同样适用于数组。但是 S 类型的结构体可以包含
+`*S`指针类型的成员，这可以让我们创建递归的数据结构，比如链表和树结构等。
+
+结构体类型的零值是每个成员都是零值。如果结构体没有任何成员的话就是空结构体，写作 struct{}。它的大小为 0，也不包含任何信息，但是有时候
+依然是有价值的。
+
+#### 结构体字面值
+
+结构体值也可以用结构体字面值表示，结构体字面值可以指定每个成员的值。
+
+```go
+type Point struct{ X, Y int }
+p := Point{1, 2}
+```
+
+以上是第一种写法，要求以结构体成员定义的顺序为每个结构体成员指定一个字面值。它要求写代码和读代码的人要记住结构体的每个成员的类型和顺序。
+更常用的是第二种写法，如下：
+
+```go
+pt := Point{Y: 2}
+```
+
+这种写法中，如果成员被忽略的话将默认用零值。因为提供了成员的名字，所以成员出现的顺序并不重要。
+
+#### 结构体比较
+
+如果结构体的全部成员都是可以比较的，那么结构体也是可以比较的。
+
+#### 结构体嵌入和匿名成员
+
+Go 语言有一个特性让我们只声明一个成员对应的数据类型而不指名成员的名字；这类成员就叫匿名成员。匿名成员的数据类型必须是命名
+的类型或指向一个命名的类型的指针。
+
+```go
+type Point struct {
+	X, Y int
+}
+
+type Circle struct {
+	Point
+	Radius int
+}
+
+type Wheel struct {
+	Circle
+	Spokes int
+}
+
+var w Wheel
+w.X = 8
+x.Y = 8
+w.Radius = 5
+w.Spokes = 20
+```
+
+**不过，结构体字面值并没有简短表示匿名成员的语法，因此下面的语句都不能编译通过**：
+
+```go
+w = Wheel{8, 8, 5, 20}
+w = Wheel{X: 8, Y: 8, Radius: 5, Spokes: 20}
+```
+
+结构体字面值必须遵循形状类型声明时的结构，所以只能用下面的两种语法，它们彼此是等价的：
+
+```go
+w = Wheel{Circle{Point{8, 8}, 5}, 20}
+
+w = Wheel{
+    Circle: Circle{
+        Point: Point{X: 8, Y: 8},
+        Radius: 5,
+    },
+    Spokes: 20,
+}
+
+fmt.Printf("%#v\n", w)
+
+w.X = 42
+fmt.Printf("%#v\n", w)
+```
+
+完整代码[embed.go](./cmd/embed.go)。
+
+
+因为匿成员也有一隐式的名字，因此不能同时包含两个类型相同的匿名成员，这会导致名字冲突。同时，因为成员的名字是由其类型隐式地决定的，
+所有匿名成员也有可见性的规则约束。上例中，Point 和 Circle 匿名成员都是导出的。
+
+匿名成员并不要求是结构体类型；其实任何命名的类型都可以作为结构体的匿名成员。但是为什么要嵌入一个没有任何子成员类型的匿名成员类型呢？
+
+答案是匿名类型的方法集。简短的点运算语法可以用于选择匿名成员嵌套的成员，也可以用于访问它们的方法。实际上，外层的结构体不仅仅是获得
+了匿名成员类型的所有成员，而且也获得了该类型导出的全部的方法。这个机制可以用于将一个有简单行为的对象组合成有复杂行为的对象。
+
+**组合是 Go 语言中面向对象编程的核心。**
+
+### JSON
+
+JavaScript 对象表示法(JSON)是一种用于改送和接收结构化信息的标准协议。在类似的协议中，JSON 并不是唯一的一个标准协议。XML、ASN.1 和
+Google 的 Protocol Buffers 都是类似的协议，并且有各自的特色，但是由于简洁性、可读性和流行程序等原因，JSON 是应用最广泛的一个。
+
+在编码时，默认使用 Go 语言结构体的成员名字作为 JSON 的对象。只有导出的结构体成员才会被编码，这也是我们为什么选择用大写字母开着的成员名称。
+如[movie.go](./cmd/movie.go)，在该代码中，Year 名字的成员在编码后变成了 released，还有 Color 成员编码后变成了小写字母开头的 color。
+这是因为构体成员 Tag 所导致的。一个构体成员 Tag 是在编译阶段关联到该成员的元信息字符串。
+
+```go
+Year    int     `json:"release"`
+Color   bool    `json:"color,omitempty"`
+```
+
+结构体的成员 Tag 可以是任意的字符串面值，但是通常是一系列用空格分隔的`key:"value"`键值对序列；因为值中含有双引号字符，因此成员 Tag 一般
+用原生字符串面值的形式书写。json 开头键名对应的值用于控制 encoding/json 包的编码和解码行为，并且 encoding/... 下面其它的包也遵循这个
+约定。成员 Tag 中 json 对应值的第一部分用于指定 JSON 对象的名字，比如将 Go 语言中的 TotalCount 成员对应到 JSON 中的 total_count 对象。
+Color 成员的 Tag 还带了一个额外的 omitempty 选项，表示当 Go 语言结构体成员为空或零值时不生成 JSON 对象（这里 false 为零值）。
