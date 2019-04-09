@@ -216,3 +216,51 @@ if !ok {
 
 Go 语言中并没有提供一个 set 类型，但是 map 中的 key 也是不相同的，可以用 map 实现类似 set 的
 功能，如[dedup.go](./cmd/dedup.go)。
+
+### 结构体
+
+结构体是一种聚合的数据类型，是由零个或多个任意类型的值聚合成的实体。每个值称为结构体的成员。以下代码
+声明了一个叫 Employee 的结构体类型，并且声明了一个 Employee 类型的变量 dilbert：
+
+```go
+type Employee struct {
+	ID          int
+	Name        string
+	Address     string
+	DoB         time.Time
+	Position    string
+	Salary      int
+	ManagerID   int
+}
+
+var dilbert Employee
+```
+
+dilbert 结构体变量的成员可以通过点操作符访问。因为 dilbert 是一个变量，它所有的成员也同样是变量，
+可以直接对每个成员赋值：
+
+```go
+dilbert.Salary -= 5000  // demoted, for writing too few lines of code
+```
+
+或者是对成员取地址，然后通过指针访问：
+
+```go
+position := &dilbert.Position
+*position = "Senior " + *position   // promoted, for outsourcing to Elbonia
+```
+
+点操作符也可以和指向结构体的指针一起工作：
+
+```go
+var employeeOfTheMonth *Employee = &dilbert
+employeeOfTheMonth.Position += " (proactive team player)"
+```
+
+相当于以下语句：
+
+```go
+(*employeeOfTheMonth).Positioin += " (proactive team player)"
+```
+
+
