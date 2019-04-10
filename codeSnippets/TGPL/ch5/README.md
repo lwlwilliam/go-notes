@@ -170,3 +170,96 @@ os.RemoveAll(dir)   // ignore errors: $TMPDIR is cleaned periodically
 尽管 os.RemoveAll 会失败，但上面的例子并没有做错误处理。这是因为操作系统会定期的清理临时目录。
 正因如此，虽然程序没有处理错误，但程序的逻辑不会因此受到影响。我们应该在每次函数调用后，都养成考
 虚错误处理的习惯，当决定忽略某个错误时，应该清晰地记录下自己的意图。
+
+#### 文件结尾错误(EOF)
+
+从文件中读取 n 个字节。如果 n 等于文件的长度，读取过程的任何错误都表示失败。如果 n 小于文件的长度，调用者会重复的读取固定大小
+的数据直到文件结束。这会导致调用者必须分别处理由文件结束引起的各种错误。基于这样的原因，io 包保证任何由文件结束引起的读取失败
+都返回同一个错误——io.EOF，该错误在 io 包中定义：
+
+```go
+package io
+
+import "errors"
+
+// EOF is the error returned by Read when no more input is available.
+var EOF = errors.New("EOF")
+```
+
+### 函数值
+
+在 Go 中，函数被看作第一类值(first-class values)：函数像其他值一样，拥有类型，可以被赋值给其他变量，传递给函数，从函数返回。
+
+```go
+func square(n int) int {return n * n}
+func negative(n int) int {return -n}
+func product(m, n int) int {return m * n}
+
+f := square
+fmt.Println(f(3))   // "9"
+
+f = negative
+fmt.Println(f(3))   // "-3"
+fmt.Printf("%T\n", f)   // "func(int) int"
+
+f = product // compile error: can't assign func(int, int) int to func(int) int
+```
+
+函数类型的零值是 nil。调用值为 nil 的函数值会引起 panic 错误：
+
+```go
+var f func(int) int
+f(3)    // 此处 f 的值为 nil，会引起 panic 错误
+```
+
+函数值可以与 nil 比较：
+
+```go
+var f func(int) int
+if f != nil {
+	f(3)
+}
+```
+
+但是函数值之间是不可比较的，也不能用函数值作为 map 的 key。
+
+函数值使得我们不仅仅可以通过数据来参数化函数，亦可通过行为。标准库中包含许多这样的例子。以下的代码展示了如何使用这个技巧。strings.Map 对
+字符串中的每个字符调用 add1 函数，并将每个 add1 函数的返回值组成一个新的字符串返回给调用者。
+
+```go
+func add1(r rune) rune {return r + 1}
+
+fmt.Println(strings.Map(add1, "HAL-9000"))  // "IBM.:111"
+fmt.Println(strings.Map(add1, "VMS"))  // "WNT"
+fmt.Println(strings.Map(add1, "Admix"))  // "Benjy"
+```
+
+### 匿名函数
+
+拥有函数名的函数只能在包级语法块中被声明，通过函数字面量(function literal)，可以绕过这一限制，在任何表达式中表示一个函数值。函数字面量
+的语法和函数声明相似，区别在于 func 关键字后没有函数名。函数值字面量是一种表达式，它的值被称为`匿名函数(anonymous function)`。
+
+函数字面量允许我们在使用函数时，再定义它。
+
+```go
+fmt.Println(strings.Map(func(r rune) rune {return r + 1}, "HAL-9000"))
+```
+
+更为重要的是，通过这种方式定义的函数可以访问完整的词法环境(lexical environment)，这意味着在函数中定义的内部函数可以引用该函数的
+变量，[squares.go](./cmd/squares.go)。
+
+函数 squares 返回另一个类型为 func() int 的函数。对 squares 的一次调用会生成一个局部变量 x 并返回一个匿名函数。每次调用匿名函数时，
+该函数都会先使 x 的值加 1，再返回 x 的平方。第二次调用 squares 时，会生成第二个 x 变量，并返回一个新的匿名函数。新匿名函数操作的是第
+二个 x 变量。
+
+squares 的例子证明，函数值不仅仅是一串代码，还记录了状态。在 squares 中定义的匿名内部函数可以访问和更新 squares 中的局部变量，这意味
+着匿名函数和 squares 中，存在变量引用。这就是函数值属于引用类型和函数值不可比较的原因。Go 使用闭包(closures)技术实现函数值，Go 程序员也
+把函数值叫做闭包。
+
+由此可见，变量的生命周期不由它的作用域决定：squares 返回后，变量 x 仍然隐式地存在于 f 中。
+
+接下来，讨论一个有点学术性的例子，考虑这样一个问题：给定一些计算机课程，每个课程都有前置课程，只有完成了前置课程才可以开始当前课程的学习；
+目标是选择出一组课程，这组课程必须确保按顺序学习时，能全部被完成。每个课程的前置课程如[toposort](./toposort)。
+
+这类问题被称为拓扑排序。从概念上说，前置条件可以构成有向图。图中的顶点表示课程，边表示课程间的依赖关系。显然，图中应该无环，这也就是说从
+某点出发的边，最终不会回到该点。下面的代码用深度优先搜索了整张图，获得了符合要求的课程序列[toposort](./cmd/toposort.go)。
