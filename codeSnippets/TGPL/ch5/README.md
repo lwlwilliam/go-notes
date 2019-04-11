@@ -329,3 +329,119 @@ for i := 0; i < len(dirs); i ++ {
 
 如果使用 go 语句或者 defer 语句会经同到此类问题。这不是 go 或 defer 本身导致的，而是因为它们都会等待循
 环结束后，再执行函数值。
+
+### 可变参数
+
+参数数量可变的函数称为可变参数函数。在声明可变参数函数时，需要在参数列表的最后一个参数类型之前加上省略符号"..."，
+这表示该函数会接收任意数量的该类型参数。
+
+在[sum.go](./cmd/sum.go)中，在第 14 行，调用者隐式地创建一个数组，并将原始参数复制到数组中，再把数组的一个切片作为参数传给
+被调函数。如果原始参数已经是切片类型，该如何传递给 sum？只需在最后一个参数后加上省略符，如第 15 行。
+
+虽然在可变参数函数内部，...int 型参数的行为看起来很像切片类型，但实际上，可变参数函数和以切片作为参数的函数是不同的，如上例的
+第 16、17 行。
+
+### Deferred 函数
+
+只需要在调用普通函数或方法前加上关键字 defer，就完成了 defer 所需要的语法。当 defer 语句被执行时，跟在 defer 后面的函数会被延迟执行。
+直到包含该 defer 语句的函数执行完毕时，defer 后的函数才会被执行，不论包含 defer 语句的函数是通过 return 正常结束，还是由于 panic
+导致的异常结束。可以在一个函数中执行多条 defer 语句，它们的执行顺序与声明顺序相反。
+
+defer 语句经常被用于处理成对的操作，如打开、关闭、连接、断开连接、加锁、释放锁。通过 defer 机制，不论函数逻辑多复杂，都能保证在任何
+执行路径下，资源被释放。
+
+调试复杂程序时，defer 机制也常被用于记录何时进入和退出函数[trace.go](./cmd/trace.go)。
+
+defer 语句中的函数会在 return 语句更新返回值变量后再执行，又因为在函数中定义的匿名函数可以访问该函数包括返回值变量在内的所有变量，
+所以，对匿名函数采用 defer 机制，可以使其观察函数的返回值[deferReturn.go](./cmd/deferReturn.go)。
+
+被延迟执行的匿名函数甚至可以修改函数返回给调用者的返回值[deferChange.go](./cmd/deferChange.go)。
+
+在循环体中的 defer 语句需要特别注意，因为只有在函数执行完毕后，这些被延迟的函数才会执行。下面的代码会导致系统的文件描述符耗尽，因为
+在所有文件都被处理之前，没有文件会被关闭。
+
+```go
+for _, filename := range filenames {
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil
+	}
+	defer f.Close() // NOTE: risky; could run out of file descriptors
+	// ...process f...
+}
+```
+
+一种解决方法是将循环体中的 defer 语句移至另外一个函数。在每次循环时，调用这个函数。
+
+```go
+for _, filename := range filenames {
+	if err := doFile(filename); err != nil {
+		return err
+	}
+}
+
+func doFile(filename string) err {
+	f, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	// ..process f...
+}
+```
+
+[fetch.go](./cmd/fetch.go)将 http 响应信息写入本地文件而不是从标准输出流输出。对 resp.Body.Close 延迟调用就不做解释了。通过 os.Create
+打开文件进行写入，`在关闭文件时，没有对 f.Close 采用 defer 机制，因为这会产生一些微妙的错误`。许多文件系统，尤其是 NFS，写入文件时发生的错误
+会被延迟到文件关闭时反馈。如果没有检查文件关闭时的反馈信息，可能会导致数据丢失，而我们还误以为写入操作成功。如果 io.Copy 和 f.Close 都失败
+了，倾向于将 io.Copy 的错误信息反馈给调用者，因为它先于 f.Close 发生，更有可能接近问题的本质。
+
+### Panic 异常
+
+Go 的类型系统会在编译时捕获很多错误，但有些错误只能在运行时检查，如数组访问越界、空指针引用等。这些运行时错误会引起 panic 异常。
+
+一般而言，当 panic 异常发生时，程序会中断运行，并立即执行在该 goroutine 中被延迟的函数（defer 机制）。随后，程序崩溃并输出日志信息。
+日志信息包括 panic value 和函数调用的堆栈跟踪信息。
+
+不是所有的 panic 异常都来自运行时，直接调用内置的 panic 函数也会引发 panic 异常；panic 函数接受任何值作为参数。当某些不应该发生的场景
+发生时，就应该调用 panic。比如，当程序到达了某条逻辑上不可能到达的路径：
+
+```go
+switch s := suit(drawCard()); s {
+case "Spades":      //...
+case "Hearts":      // ...		
+case "Diamonds":    // ...		
+case "Clubs":       // ...		
+default:
+	panic(fmt.Sprintf("invalid suit %q", s))    // Joker?
+}
+```
+
+虽然 Go 的 panic 机制类似于其他语言的异常，但 panic 的适用场景有一些不同。由于 panic 会引起程序的崩溃，因此一般用于严重错误，如程序内部
+的逻辑不一致。
+
+在健壮的程序中，任何可以预料到的错误，如不正确的输入、错误的配置或是失败的 I/O 操作都应该被优雅的处理，最好的处理方式，就是使用 Go 的错误机制。
+
+为了方便诊断问题，runtime 包允许程序员输出堆栈信息[stack.go](./cmd/stack.go)。
+
+### Recover 捕获异常
+
+通常来说，不应该对 panic 异常做任何处理，但有时，也许我们可以从异常中恢复，至少可以在程序崩溃前，做一些操作。举个例子，当 web 服务器遇到不可
+预料的严重问题时，在崩溃前应该将所有连接关闭；如果不做任何处理，会使得客户端一直处于等待状态。如果 web 服务器还在开发阶段，服务器甚至可以将
+异常信息反馈到客户端，帮助调试。
+
+如果在 deferred 孙炜中调用了内置函数 recover，并且定义该 defer 语句的函数发生了 panic 异常，recover 会使程序从 panic 中恢复，并返回
+panic value。导致 panic 异常的函数不会继续运行，但能正常返回。在未发生 panic 时调用 recover，会返回 nil。
+
+以语言解析器为例，说明 recover 的使用场景。考虑到语言解析器的复杂性，即使某个语言解析器目前工作正常，也无法肯定它没有漏洞。因此，当某个
+异常出现时，我们不会选择让解析器崩溃，而是会将 panic 异常当作普通的解析错误，并附加额外信息提醒用户报告此错误。
+
+```go
+func Parse(input string) (s *Syntax, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("internal error: %v", p)
+		}
+	}()
+	// ...parser...
+}
+```

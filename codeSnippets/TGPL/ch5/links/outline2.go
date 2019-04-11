@@ -9,8 +9,8 @@ var depth int
 
 // 针对每个结点 x，都会调用 pre(x) 和 post(x)
 // pre, post 都是可选的
-// 遍历孩子结点之前，pre 被调用
-// 遍历孩子结点之后，post 被调用
+// 遍历子结点之前，pre 被调用
+// 遍历子结点之后，post 被调用
 func ForEachNode(n *html.Node, pre, post func(n *html.Node))  {
 	if pre != nil {
 		pre(n)
