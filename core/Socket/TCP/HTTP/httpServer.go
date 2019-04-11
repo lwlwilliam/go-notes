@@ -29,7 +29,7 @@ func handleConn(conn net.Conn) {
 }
 
 func main() {
-	addr := "localhost:10000"
+	addr := ":20000"
 	listener, err := net.Listen("tcp", addr)
 	checkErr(err)
 	defer listener.Close()

@@ -263,3 +263,69 @@ squares 的例子证明，函数值不仅仅是一串代码，还记录了状态
 
 这类问题被称为拓扑排序。从概念上说，前置条件可以构成有向图。图中的顶点表示课程，边表示课程间的依赖关系。显然，图中应该无环，这也就是说从
 某点出发的边，最终不会回到该点。下面的代码用深度优先搜索了整张图，获得了符合要求的课程序列[toposort](./cmd/toposort.go)。
+
+#### 警告：捕获迭代变量
+
+这里介绍 Go 词法作用域的一个陷阱。
+
+考虑这样一个问题：你被要求首先创建一些目录，再将目录删除。为了使代码简单，忽略了所有的异常处理。
+
+```go
+var rmdirs []func()
+for _, d := range tempDirs() {
+	dir := d  // NOTE: necessary!
+	os.MkdirAll(dir, 0755)  // creates parent directories too
+	rmdirs = append(rmdirs, func() {
+		os.RemoveAll(dir)
+	})
+}
+
+// ... do some work...
+for _, rmdir := range rmdirs {
+	rmdir()  // clean up
+}
+```
+
+为什么要在循环体中用循环变量 d 赋值一个新的局部变量，而不是像下面的代码一样直接使用循环变量 dir。需要注意，
+下面的代码是错误的。
+
+```go
+var rmdirs []func()
+for _, dir := range tempDirs() {
+	os.MkdirAll(dir, 0755)
+	rmdirs = append(rmdirs, func() {
+		os.RemoveAll(dir)  // NOTE: incorrect!
+	})
+}
+```
+
+问题的原因在于循环变量的作用域。在上面的程序中，for 循环语句引入了新的词法块，循环变量 dir 在这个词法块中
+被声明。在该循环中生成的所有函数值都共享相同的循环变量。需要注意，函数值中记录的是循环变量的内存地址，而不
+是循环变量某一时刻的值。以 dir 为例，后续的迭代会不断更新 dir 的值，当删除操作执行时，for 循环已完成，dir
+中存储的值等于最后一次迭代的值。这意味着，每次对 os.RemoveAll 调用删除的都是相同的目录。
+
+通常，为了解决这个问题，会引入一个与循环变量同名的局部变量，作为循环变量的副本。比如下面的变量 dir，虽然这看
+起来很奇怪，但却很有用。
+
+```go
+for _, dir := range tempDirs() {
+	dir := dir  // declares inner dir, initialized to outer dir
+	// ...
+}
+```
+
+这个问题不仅存在基于 range 的循环，在下例中，对循环变量 i 的使用也存在同样的问题：
+
+```go
+var rmdirs []func()
+dirs := tempDirs()
+for i := 0; i < len(dirs); i ++ {
+	os.MkdirAll(dirs[i], 0755)  // OK
+	rmdirs = append(rmdirs, func() {
+		os.RemoveAll(dirs[i])  // NOTE: incorrect!
+	})
+}
+```
+
+如果使用 go 语句或者 defer 语句会经同到此类问题。这不是 go 或 defer 本身导致的，而是因为它们都会等待循
+环结束后，再执行函数值。
