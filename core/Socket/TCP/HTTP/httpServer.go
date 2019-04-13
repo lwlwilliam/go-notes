@@ -5,31 +5,22 @@ import (
 	"log"
 	"net"
 	"os"
-	"time"
 )
 
-// TODO:暂时不清楚这响应报文的准确格式，是 \r\n 呢？还是 \n 呢？又好像都不对
-//var content = `HTTP/1.1 200 OK\r\nContent-type: text/html\r\n\r\nHello world!`
-
-// 只能保证这个是可以的
-var content = []byte(`HTTP/1.1 200 OK
-Content-type: text/plain
-
-Hello world!`)
-
+// HTTP 响应报文，行分隔符为 \r\n
+var content = []byte("HTTP/1.1 200 OK\r\nContent-type:text/plain\r\n\r\nHello world!")
 
 func handleConn(conn net.Conn) {
 	// 这里发现一定要把连接里的数据都读出来才能正常写入
-	//var buf = make([]byte, 1024) // buf 要确保所有数据都读出来了，最好循环读到 EOF
-	//_, err := conn.Read(buf)
-	//checkErr(err)
+	var buf = make([]byte, 1024) // buf 要确保所有数据都读出来了，最好循环读到 EOF
+	_, err := conn.Read(buf)
+	checkErr(err)
 	conn.Write(content)
-	time.Sleep(time.Second * 1)
 	defer conn.Close()
 }
 
 func main() {
-	addr := ":20000"
+	addr := "localhost:10000"
 	listener, err := net.Listen("tcp", addr)
 	checkErr(err)
 	defer listener.Close()
