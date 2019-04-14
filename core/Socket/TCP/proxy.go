@@ -1,13 +1,22 @@
+// 正向代理基本原理：
+// 1. 代理程序以守护进程方式运行，接受客户端的连接，实际就是 tcp socket 编程；
+// 2. 与客户端建立连接后，以多线程，多进程的方式（在 Go 中就是 goroutine）处理连接；
+// 3. 每个连接都是一个独立的 goroutine。首先就是要读取客户端的请求内容，对请求内容进行解析，
+//    在这里以每次 1024 字节对内容进行处理，默认客户端以 HTTP/HTTPS 协议与代理通信，所以按
+//    协议规范进行解析即可；
+// 4. 解析客户端内容后可以获取请求主机和端口号，代理通过主机和端口号可以建立与目标服务器的连接，
+//    然后把客户端的请求内容写到连接，再把服务器返回的内容写回到与客户端的连接即可；
+// 5. 以上就是代理的简单原理；
 package main
 
 import (
-	"net"
-	"log"
-	"fmt"
 	"bytes"
+	"fmt"
+	"io"
+	"log"
+	"net"
 	"net/url"
 	"strings"
-	"io"
 )
 
 func main() {
@@ -33,7 +42,7 @@ func requestHandler(request net.Conn) {
 	defer request.Close()
 
 	// 获取请求内容
-	var buf [1024]byte
+	var buf = make([]byte, 1024)
 	n, err := request.Read(buf[:])
 	if err != nil {
 		log.Println("Read request:", err)
