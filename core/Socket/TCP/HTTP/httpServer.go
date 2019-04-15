@@ -12,10 +12,12 @@ var content = []byte("HTTP/1.1 200 OK\r\nContent-type:text/plain\r\n\r\nHello wo
 
 func handleConn(conn net.Conn) {
 	// 这里发现一定要把连接里的数据都读出来才能正常写入
-	var buf = make([]byte, 1024) // buf 要确保所有数据都读出来了，最好循环读到 EOF
-	_, err := conn.Read(buf)
-	checkErr(err)
+	//var buf = make([]byte, 1024) // buf 要确保所有数据都读出来了，最好循环读到 EOF
+	//_, err := conn.Read(buf)
+	//checkErr(err)
 	conn.Write(content)
+
+	//fmt.Fprintf(conn, "%s", string(content))
 	defer conn.Close()
 }
 

@@ -150,4 +150,278 @@ var _ fmt.Stringer = &s // OK
 var _ fmt.Stringer = s // compile error: IntSet lacks String method
 ```
 
+就像信封封闭和隐藏信件起来一样，接口类型封装和隐藏具体类型和它的值。即使具体类型有其他的方法也只有接口类型暴露出来的方法会被调用到：
 
+```go
+os.Stdout.Write([]byte("Hello world!")) // OK: *os.File has Write method
+os.Stdout.Close()                       // OK: *os.File has Close method
+
+var w io.Writer
+w = os.Stdout
+w.Write([]byte("Hello world!")) // OK: io.Writer has Write method
+w.Close()                       // compile error: io.Writer lacks Close method
+```
+
+`interface{} 被称为空接口类型`，它是不可或缺的。因为空接口类型对实现它的类型没有要求，所以可以将任意一个值赋给空接口类型。
+
+```go
+var any interface{}
+any = true
+any = 12.34
+any = "Hello world"
+any = map[string]int{"one": 1}
+any = new(bytes.Buffer)
+```
+
+我们不能直接对它持有的值做操作，因为 interface{} 没有任何方法。
+
+一个具体的类型可能实现了很多不相关的接口。考虑在一个组织出售数字文件产品比如音乐，电影和书籍的程序中可能定义了下列的具体类型：
+
+```
+Album
+Book
+Movie
+Magazine
+Podcast
+TVEpisode
+Track
+```
+
+可以把每个抽象的特点用接口来表示。一个特性对于所有的这些文化产品都是共通的，例如标题，创作日期和作者列表。
+
+```go
+type Artifact interface {
+	Title() string
+	Creators() []string
+	Created() time.Time
+}
+```
+
+其它的一些特性只对特定类型的文化产品才有。
+
+```go
+type Text interface {
+	Pages() int
+	Words() int
+	PageSize() int
+}
+type Audio interface {
+	Stream() (io.ReadCloser, error)
+	RunningTime() time.Duration
+	Format() string // e.g., "MP3", "WAV"
+}
+type Video interface {
+	Stream() (io.ReadCloser, error)
+	RunningTime() time.Duration
+	Format() string // e.g., "MP4", "WMV"
+	Resolution() (x, y int)
+}
+```
+
+这些接口不止是一种有用的方式来分组相关的具体类型和表示他们之间的共同特点。我们后面可能会发现其它的分组。举例，如果我们发现需要以同样的方式处理
+Audio 和 Video，可以定义一个 Streamer 接口来代表它们之间相同的部分而不必对已经存在的类型做改变。
+
+```go
+type Streamer interface {
+	Stream() (io.ReadCloser, error)
+	RunningTime() time.Duration
+	Format() string
+}
+```
+
+每一个具体类型的组基于它们相同的行为可以表示成一个接口类型。不像基于类的语言，他们一个类实现的接口集合需要进行显式的定义，在 Go 语言中我们可以
+在需要的时候定义一个新的抽象或者特定特点的组，而不需要修改具体类型的定义。当具体的类型来自不同的作者时这种方式会特别有用。当然也确实没有必要在
+具体的类型中指出这些共性。
+
+### flag.Value 接口
+
+[sleep.go](./cmd/sleep.go)
+
+### 接口值
+
+概念上讲一个接口的值，接口值，由两个部分组成，一个具体的类型和那个类型的值。它们被称为接口的动态类型和动态值。对于像 Go 语言这种静态类型的语言，
+类型是编译期的概念；因此一个类型不是一个值。在我们的概念模型中，一些提供每个类型信息的值被称为类型描述符，比如类型的名称和方法。在一个接口值中，
+类型部分代表与之相关类型的描述符。
+
+下面 4 个语句中，变量 w 得到了 3 个不同的值。（开始和最后的值是相同的）
+
+```go
+var w io.Writer
+w = os.Stdout
+w = new(bytes.Buffer)
+w = nil
+```
+
+进一步观察在每一个语句后的 w 变量值和动态行为。第一个语句定义了变量 w：
+
+```go
+var w io.Writer
+```
+
+在 Go 语言中，变量总是被一个定义明确的值初始化，即使接口类型也不例外。对于一个接口的零值就是它的类型和值的部分都是 nil。
+
+![nil interface](./assets/WX20190415-115718.png)
+
+一个接口值基于它的动态类型被描述为空或非空，所以这是一个空的接口值。可以通过使用 w==nil 或 w!=nil 来判读接口值是否为空。调用一个空接口值上
+的做生意方法都会产生 panic：
+
+```go
+w.Write([]byte("Hello world!")) // panic: nil pointer dereference
+```
+
+第二个语句将一个`*os.File`类型的值赋给变量 w：
+
+```go
+w = os.Stdout
+```
+
+这个赋值过程调用了一个具体类型到接口类型的隐式转换，这和显式地使用 io.Writer(os.Stdout) 是等价的。这类转换不管是显式的还是隐式的，都会刻
+画出操作到的类型的值。这个接口值的动态类型被设为`*os.Stdout`指针的类型描述符，它的动态值持有 os.Stdout 的拷贝。
+
+![An interface value containing an *os.File pointer](./assets/WX20190415-121504.png)
+
+调用一个包含`*os.File`类型指针的接口值的 Write 方法，使得`(*os.File).Write`方法被调用。
+
+```go
+w.Write([]byte("Hello world!"))
+```
+
+通常在编译期，我们不知道接口值的动态类型是什么，所以一个接口上的调用必须使用动态分配。因为不是直接进行调用，所以编译器必须把代码生成在类型描述
+符的方法 Write 上，然后间接调用那个地址。这个调用的接收者是一个接口动态值的拷贝，os.Stdout。效果和下面这个直接调用一样：
+
+```go
+os.Stdout.Write([]byte("Hello world!"))
+```
+
+第三个语句给接口值赋了一个`*bytes.Buffer`类型的值。
+
+```go
+w = new(bytes.Buffer)
+```
+
+现在动态类型是`*bytes.Buffer`并且动态值是一个指向新分配的缓冲区的指针。
+
+![An interface value containing a *bytes.Buffer pointer](./assets/WX20190415-122453.png)
+
+Write 方法的调用也使用了和之前一样的机制：
+
+```go
+w.Write([]byte("Hello world!")) // writes "Hello world!" to the bytes.Buffers
+```
+
+最后，第四个语句将 nil 赋给了接口值：
+
+```go
+w = nil
+```
+
+这个重置将它所有的部分都设为 nil 值，把变量 w 恢复到和它之前定义时相同的状态图。
+
+接口值可以使用 == 和 != 来进行比较。两个接口值仅当它们都是 nil 值或者它们的动态类型相同并且动态值也根据这个动态类型的 == 操作相等时相等。
+然而，如果两个接口值的动态类型相同，但是这个动态类型是不可比较的（比如切片），将它们进行比较就会失败并且 panic：
+
+```go
+var x interface{} = []int{1, 2, 3}
+fmt.Println(x == x) // panic: comparing umcomparable type []int
+```
+
+当我们处理错误或调试的过程中，得知接口值的动态类型是非常有帮助的。
+
+#### 警告：一个包含 nil 指针的接口不是 nil 接口
+
+一个不包含任何值的 nil 接口值和一个刚好包含 ni 指针的接口值是不同的。
+
+```go
+const debug = true
+
+func main()  {
+    var buf *bytes.Buffer
+    if debug {
+    	buf = new(bytes.Buffer) // enable collection of output
+    }
+    f(buf) // NOTE: subtly incorrect!
+    if debug {
+    	// ... use buf ...
+    }
+}
+
+// If out is non-nil, output will be written to it.
+func f(out io.Writer) {
+	// ... do something ...
+    if out != nil {
+    	out.Write([]byte("done!\n"))
+    }	
+}
+```
+
+我们可能会预计当把变量 debug 设置为 false 时可以禁止对输出的收集，但是实际上在 out.Write 方法调用时程序发生了 panic：
+
+```go
+if out != nil {
+	out.Write([]byte("done!\n")) // panic: nil pointer dereference
+}
+```
+
+当 main 函数调用函数 f 时，它给 f 函数的 out 参数赋了一个`*bytes.Buffer`的空指针，所以 out 的动态值是 nil。然而，它的动态类型是
+`*bytes.Buffer`，意思就是 out 变量是一个包含空指针的非空接口，以以防御性检查 out!=nil 的结果依然是 true。
+
+![A non-nil interface containing a nil pointer](./assets/WX20190415-143332.png)
+
+动态分配机制依然决定`(*bytes.Buffer).Write`的方法会被调用，但是这次的接收者的值是 nil。对`(*bytes.Buffer)`类型来说，nil 并不是有
+效的接收者，这个方法会被调用，但是当它尝试去获取缓冲区时会发生 panic。解决方案就是将 main 函数中的变量 buf 的类型改为 io.Writer，
+因此可以避免一开始就将一个不完全的值赋给这个接口：
+
+```go
+var buf io.Writer
+if debug {
+	buf = new(bytes.Buffer) // enable collection of output
+}
+f(buf) // OK
+```
+
+### error 接口
+
+error 类型实际上就是 interface 类型，这个类型有一个返回错误信息的单一方法：
+
+```go
+type error interface {
+	Error() string
+}
+```
+
+创建一个 error 最简单的方法就是调用 errors.New 函数，它会根据传入的错误信息返回一个新的 error。整个 errors 包仅只有 4 行：
+
+```go
+package errors
+
+func New(text string) error  {
+    return &errorString{text}
+}
+
+type errorString struct {
+	text string
+}
+
+func (e *errorString) Error() string  {
+    return e.text 
+}
+```
+
+### 类型断言
+
+类型断言是一个使用在`接口值`上的操作。语法上它看起来像`x.(T)`，被称为断言类型，x 表示接口类型的表达式，T 表示类型。一个断言检查它操作对象
+的动态类型是否和断言的类型匹配。
+
+这里有两种可能。第一种，如果断言的类型 T 是一个具体类型，然后类型断言检查 x 的动态类型是否和 T 相同。如果这个检查成功了，类型断言的结果是
+x 的动态值，当然它的类型是 T。换句话说，具体类型的类型断言从它的操作对象中获得具体的值。如果检查失败，接下来这个操作会抛出 panic。
+
+```go
+var w io.Writer
+w = os.Stdout
+f := w.(*os.File)       // success: f == os.Stdout
+c := w.(*bytes.Buffer)  // panic: interface holds *os.File, not *bytes.Buffer
+```
+
+第二种，如果断言的类型 T 是一个接口类型，然后类型断言检查是否 x 的动态类型满足 T。如果这个检查成功了，动态值没有获取到；这个结果仍然是
+一个有相同类型和值部分的接口值，但是结果有类型 T。换句话说，对一个接口类型的类型断言改变了类型的表述方式，改变了可以获取的方法集合（通常
+更大），但是它保护了接口值内部的动态类型和值的部分。
