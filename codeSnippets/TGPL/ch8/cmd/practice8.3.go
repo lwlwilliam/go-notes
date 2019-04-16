@@ -1,10 +1,11 @@
+// 只关闭网络连接中写的部分
 package main
 
 import (
 	"net"
 	"log"
-	"os"
 	"io"
+	"os"
 )
 
 func main()  {
@@ -14,12 +15,19 @@ func main()  {
 	}
 	done := make(chan struct{})
 	go func() {
-		io.Copy(os.Stdout, conn) // NOTE: ignoring errors
+		io.Copy(os.Stdout, conn)
 		log.Println("done")
-		done <- struct{}{} // signal the main goroutine
+		done <- struct {}{}
 	}()
 	mustCopy(conn, os.Stdin)
-	conn.Close()
+
+	if tcpconn, ok := conn.(*net.TCPConn); ok {
+		log.Println("tcp connection close")
+		tcpconn.CloseWrite()
+	} else {
+		conn.Close()
+	}
+
 	<- done
 }
 
