@@ -277,3 +277,44 @@ func request(hostname string) (response string) { /* ... */ }
 操作与相应的同步接收操作；但是对于带缓存 channel，这些操作是解耦的。
 
 ### 并发的 Web 爬虫
+
+### 基于 select 的多路复用
+
+[countdown1.go](./cmd/countdown1.go)
+
+以下程序与上面的程序相比，需要等待两个 channel 中的其中一个返回事件。我们无法做到从每一个 channel 中接
+收信息，如果这么做的话，如果第一个 channel 中没有事件发过来那么程序就会立刻被阻塞，这样就无法收到第二个
+channel 中发过来的事件。这时候需要多路复用(multiplex)这些操作了，为了能够多路复用，我们使用了 select
+语句。
+
+[countdown2.go](./cmd/countdown2.go)
+
+```go
+select {
+case <- ch1:
+	// ...
+case x := ch2:
+    // ...use x...
+case ch3 <- y:
+    // ...
+default:
+    // ...
+}
+```
+
+上面是 select 语句的一般形式。每一个 case 代表一个通信操作（在某个 channel 上进行发送或者接收）并且
+会包含一些语句组成的一个语句块。一个接收表达式可能只包含接收表达式自身（不把接收到的值赋值给变量什么的），
+就像上面的第一个 case，或者包含在一个简短的变量声明中，像第二个 case 里一样。
+
+select 会等待 case 中有能够执行的 case 时去执行。当条件满足时，select 才会去通信并执行 case 之后
+的语句；这时候其它通信是不会执行的。一个没有任何 case 的 select 语句写作 select{}，会永远地等待下去。
+
+[betweenCountdown2and3.go](./cmd/betweenCountdown2and3.go)
+
+下面一个例子更微妙[surprise.go](./cmd/surprise.go)
+
+如果多个 case 同时就绪时，select 会随机地选择一个执行，这样来保证每一个 channel 都有平等的被 select
+的机会。增加前一个例子的 buffer 大小会使期输出变得不确定，因为当 buffer 既不为满也不为空时，select 语
+句的执行情况就像是抛硬币的行为一样是随机的。
+
+[countdown3.go](./cmd/countdown3.go)
