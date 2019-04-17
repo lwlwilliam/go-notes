@@ -318,3 +318,71 @@ select 会等待 case 中有能够执行的 case 时去执行。当条件满足�
 句的执行情况就像是抛硬币的行为一样是随机的。
 
 [countdown3.go](./cmd/countdown3.go)
+
+time.Tick 表现得好像它创建了一个在循环中调用 time.Sleep 的 goroutine，每次被唤醒时发送一个事件。当
+countdown 函数返回时，它会停止从 tick 中接收事件，但是 ticker 这个 goroutine 还依然存活，继续徒劳地
+尝试向 channel 中发送值，然而这时候已经没有其它的 goroutine 会从该 channel 中接收值了——这被称为
+goroutine 泄露。
+
+Tick 函数挺方便，但是只有当程序整个生命周期都需要这个时间时我们使用它才比较合适。否则的话，应该使用下面
+这种模式：
+
+```go
+ticker := time.NewTicker(1 * time.Second)
+<- ticker.C     // receive from the ticker's channel
+ticker.Stop()   // cause the ticker's goroutine to terminate
+```
+
+有时候我们希望能够从 channel 中发送或者接收值，并避免因为发送或者接收导致的阻塞，尤其是当 channel 没有准备好写或者读时。
+select 语句就可以实现这样的功能。select 会有一个 default 来设置当其它的操作都不能够马上被处理时程序需要执行哪些逻辑。
+
+下面的 select 语句会在 abort channel 中有值时，从其中接收值；无值时什么都不做。这是一个非阻塞的接收操作；反复地做这样
+的操作叫做"轮询 channel"。
+
+channel 的零值是 nil。nil 的 channel 有时候也是有一些用处的。因为对一个 nil 的 channel 发送和接收操作会永远阻塞，在
+select 语句中操作 nil 的 channel 永远都不会被 select 到。这使得我们可以用 nil 来激活或者禁用 case，来达成处理其它输入
+或输出事件时超时和取消的逻辑。
+
+### 并发的字典遍历
+
+[du1.go](./cmd/du1.go)
+
+[du2.go](./cmd/du2.go)
+
+由于 du2 中不再使用 range 循环，第一个 select 的 case 必须显式地判断 fileSizes 的 channel 是不是已经关闭了。
+
+然而上面的程序还是会花上很长时间才会结束。无法对 walkDir 做并行处理。没有别的原因，无非是因为磁盘系统并行限制。以下第三个版本的
+du，会对每一个 walkDir 的调用创建一个新的 goroutine，[du3.go](./cmd/du3.go)。
+
+由于 du3 程序在高峰期会创建成百上千的 goroutine，我们需要修改 dirents 函数，用计数信号量来阻止他同时打开太多的文件。
+
+```go
+// sema is a counting semaphore for limiting concurrency in dirents.
+var sema = make(chan struct{}, 20)
+
+// dirents returns the entries of directory dir.
+func dirents(dir string) []os.FileInfo {
+	sema <- struct{}{}          // acquire token
+	defer func() {
+		<- sema
+	}()                         // release token
+}
+```
+
+[semaphoreOfdu.go](./cmd/semaphoreOfdu.go)
+
+这个版本比之前那个快了好几倍，尽管其具体效率还是和运行环境，机器配置相关。
+
+### 并发的退出
+
+有时候我们需要通知 goroutine 停止它正在干的事情，比如一个正在执行计算的 web 服务，然而它的客户端已经断开了和服务端的连接。
+
+Go 语言并没有提供在一个 goroutine 中终止另一个 goroutine 的方法，由于这样会导致 goroutine 之间的共享变量落在未定义的
+状态上。
+
+在[countdown3.go](./cmd/countdown3.go)中，往名字为 abort 的 channel 里发送了一个简单的值，在 goroutine 中会把这
+个理解为自己的退出信号。但是如果我们想要退出两个或者任意多个 goroutine 怎么办呢？
+
+一种可能的手段是向 abort 的 channel 里发送和 goroutine 数目一样多的事件来退出它们。但是一般情况下我们是很难知道在某一时刻
+具体有多少个 goroutine 在运行着的；另外，当一个 goroutine 从 abort channel 中接收到一个值的时候，他会消费掉这个值，这样
+其它的 goroutine 就没法看到这条信息。我们需要更靠谱的策略。
