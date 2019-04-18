@@ -1,10 +1,18 @@
 package main
 
 import (
-	"net"
+	"bufio"
 	"flag"
-	"strings"
 	"fmt"
+	"net"
+	"os"
+	"strings"
+)
+
+const (
+	PROTOCOL = "tcp"
+	HOST     = "localhost"
+	PORT     = "10000"
 )
 
 // hold all of the available clients, received data, and potential incoming or terminating clients.
@@ -21,12 +29,51 @@ type Client struct {
 	data   chan []byte
 }
 
+// listen for connections
 func startServerMode() {
+	fmt.Println("Starting server...")
+	listener, error := net.Listen(PROTOCOL, HOST + ":" + PORT)
+	if error != nil {
+		fmt.Println(error)
+	}
 
+	// initialize manager and start the manager goroutine
+	manager := ClientManager{
+		clients: make(map[*Client]bool),
+		broadcast: make(chan []byte),
+		register: make(chan *Client),
+		unregister: make(chan *Client),
+	}
+	go manager.start()
+
+	// do a continuous loop listening for connections
+	for {
+		// If a connection is accepted, it will be registered
+		// and prepared for sending and receiving of data.
+		connection, _ := listener.Accept()
+		if error != nil {
+			fmt.Println(error)
+		}
+		client := &Client{socket: connection, data: make(chan []byte)}
+		manager.register <- client
+		go manager.receiver(client)
+		go manager.send(client)
+	}
 }
 
 func startClientMode() {
-
+	fmt.Println("Starting client...")
+	connection, error := net.Dial(PROTOCOL, HOST + ":" + PORT)
+	if error != nil {
+		fmt.Println(error)
+	}
+	client := &Client{socket: connection}
+	go client.receive()
+	for {
+		reader := bufio.NewReader(os.Stdin)
+		message, _ := reader.ReadString('\n')
+		connection.Write([]byte(strings.TrimRight(message, "\n")))
+	}
 }
 
 func main() {
@@ -45,13 +92,13 @@ func (manager *ClientManager) start() {
 		select {
 		// If it reads data from the register channel,
 		// the connection will be stored and a status will be printed in the logs.
-		case connection := <- manager.register:
+		case connection := <-manager.register:
 			manager.clients[connection] = true
 			fmt.Println("Added new connection!")
 		// If the unregister channel has data and that data which represents a connection,
 		// exists in our managed clients map, then the data channel for that connection will be closed
 		// and the connection will be removed from the list.
-		case connection := <- manager.unregister:
+		case connection := <-manager.unregister:
 			if _, ok := manager.clients[connection]; ok {
 				close(connection.data)
 				delete(manager.clients, connection)
@@ -59,7 +106,7 @@ func (manager *ClientManager) start() {
 			}
 		// If the broadcast channel has data it means we've received a message. This message should be sent to
 		// every connection we're watching so this is done by looping through the available connections.
-		case message := <- manager.broadcast:
+		case message := <-manager.broadcast:
 			for connection := range manager.clients {
 				select {
 				case connection.data <- message:
@@ -102,11 +149,29 @@ func (manager *ClientManager) send(client *Client) {
 	for {
 		select {
 		// If the client has data to be sent and there are no errors, that data will be
-		case message, ok := <- client.data:
+		// sent to the client in question. If there is an error and the loop breaks, the
+		// connection to the socket will end.
+		case message, ok := <-client.data:
 			if !ok {
 				return
 			}
 			client.socket.Write(message)
+		}
+	}
+}
+
+// the difference between client and server is that we aren't taking
+// our received messages to a central processor.
+func (client *Client) receive() {
+	for {
+		message := make([]byte, 4096)
+		length, err := client.socket.Read(message)
+		if err != nil {
+			client.socket.Close()
+			break
+		}
+		if length > 0 {
+			fmt.Println("RECEIVED: " + string(message))
 		}
 	}
 }
