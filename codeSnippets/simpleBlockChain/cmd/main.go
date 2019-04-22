@@ -1,6 +1,6 @@
 package main
 
-import "github.com/lwlwilliam/Golang/codeSnippets/simpleBlockChainn/core"
+import "github.com/lwlwilliam/Golang/codeSnippets/simpleBlockChain/core"
 
 func main() {
 	bc := core.NewBlockchain()
