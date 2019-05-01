@@ -1,3 +1,3 @@
 # Golang
 
-Golang study notes.
+Go study notes.
