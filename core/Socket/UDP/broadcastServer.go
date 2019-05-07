@@ -1,4 +1,3 @@
-// 多播服务端
 package main
 
 import (
@@ -7,12 +6,7 @@ import (
 )
 
 func main() {
-	addr, err := net.ResolveUDPAddr("udp", "224.0.0.1:9999")
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	listener, err := net.ListenMulticastUDP("udp", nil, addr)
+	listener, err := net.ListenUDP("udp", &net.UDPAddr{IP:net.IPv4zero, Port:9999})
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -26,6 +20,13 @@ func main() {
 		if err != nil {
 			fmt.Printf("error during read: %s\n", err)
 		}
+
 		fmt.Printf("<%s> %s\n", remoteAddr, data[:n])
+
+		_, err = listener.WriteToUDP([]byte("Hello server!"), remoteAddr)
+
+		if err != nil {
+			fmt.Printf(err.Error())
+		}
 	}
 }
