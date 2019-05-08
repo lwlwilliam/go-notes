@@ -7,7 +7,8 @@ import (
 )
 
 func main() {
-	ip := net.ParseIP("192.168.30.255")
+	// 局域网广播地址
+	ip := net.ParseIP("192.168.11.255")
 
 	srcAddr := &net.UDPAddr{IP: net.IPv4zero, Port:0}
 	dstAddr := &net.UDPAddr{IP: ip, Port:9999}
@@ -17,7 +18,7 @@ func main() {
 		fmt.Println(err)
 	}
 
-	n, err := conn.WriteToUDP([]byte("Hello client!"), dstAddr)
+	n, err := conn.WriteToUDP([]byte("Hello server!"), dstAddr)
 	if err != nil {
 		fmt.Println(err)
 	}
