@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"net/url"
 	"fmt"
-	"github.com/lwlwilliam/Golang/codeSnippets/slbrowserr/tool"
+	"github.com/lwlwilliam/Golang/codeSnippets/slbrowser/tool"
 )
 
 // 装备类型
