@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/lwlwilliam/Golang/Translations/yourbasic.org/Object-oriented_programming/src/timer" //	"./timer"	// 不建议使用相对路径导入 package
 	"time"
+	"github.com/lwlwilliam/go/translations/yourbasic.org/Object-oriented_programming/src/timer"
 )
 
 func main() {

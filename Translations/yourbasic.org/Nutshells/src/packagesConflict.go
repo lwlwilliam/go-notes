@@ -1,10 +1,10 @@
 package main
 
 import (
-	cusRand "github.com/lwlwilliam/Golang/Translations/yourbasic.org/Nutshells/src/math/rand"
 	stdRand "math/rand"
 	"fmt"
 	"time"
+	cusRand "github.com/lwlwilliam/go/translations/yourbasic.org/Nutshells/src/math/rand"
 )
 
 func main() {

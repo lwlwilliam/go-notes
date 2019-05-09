@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"github.com/lwlwilliam/Golang/Translations/yourbasic.org/Object-oriented_programming/src/timer"
 	"time"
+	"github.com/lwlwilliam/go/translations/yourbasic.org/Object-oriented_programming/src/timer"
 )
 
 func main() {
