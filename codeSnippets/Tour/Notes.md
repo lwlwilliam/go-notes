@@ -1,1 +1,0 @@
-### A Tour of Go
