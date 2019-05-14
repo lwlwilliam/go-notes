@@ -67,6 +67,11 @@ $ go run alpha_reader.go
 HelloItSamwhereisthesum
 ```
 
+#### 链式 Reader
+
+标准库已经实现了很多 reader。用一个 reader 作为另一个 reader 的数据源是很普遍的。链式 reader 允许一个
+reader 重用另一个的逻辑，如以下源码片段中，对 alphaReader 进行了修改，使得其可以接受一个 io.Reader 作
+为它的数据源。通过把流传到根 reader 可以降低代码复杂性。
 
 
 
