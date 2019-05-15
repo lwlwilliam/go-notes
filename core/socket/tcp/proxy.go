@@ -24,10 +24,14 @@ func main() {
 	socket, err := net.Listen("tcp", ":60000")
 	fatalError(err)
 
+	log.Println("Running...")
+
 	// 接收客户端请求
 	for {
 		request, err := socket.Accept()
 		fatalError(err)
+
+		log.Println(request.RemoteAddr())
 
 		// 处理请求
 		go requestHandler(request)
@@ -70,15 +74,15 @@ func requestHandler(request net.Conn) {
 		}
 	}
 
+	// 记录请求 socket
+	log.Println("Attempt to request:", address)
+
 	// 到目标服务器的 socket
 	server, err := net.Dial("tcp", address)
 	if err != nil {
 		log.Println("Create socket to target server:", err)
 		return
 	}
-
-	// 记录请求 socket
-	log.Println("Attempt to request:", address)
 
 	// 创建隧道
 	if method == "CONNECT" {
