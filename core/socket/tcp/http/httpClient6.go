@@ -25,17 +25,20 @@ func main() {
 	checkError(err, "connect")
 
 	// 写入 http 请求报文
-	_, err = conn.Write([]byte(
+	// 验证 GET 请求能不能添加请求体
+	n, err := conn.Write([]byte(
 		"GET / HTTP/1.1\r\n" +
-		"Host: " + socket + "\r\n\r\n"))
+		"Host: " + socket + "\r\n\r\n" +
+		"Hello world!"))
 	checkError(err, "write to conn")
+
+	fmt.Printf("has written %d bytes to the server", n)
 
 	// 读取 http 响应
 	result, err := ioutil.ReadAll(conn)
 	checkError(err, "read from conn")
 
-	//fmt.Println(string(result))
-	fmt.Println(result)
+	fmt.Printf("%s", result)
 
 	os.Exit(0)
 }
