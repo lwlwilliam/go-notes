@@ -184,8 +184,8 @@ func (t *transition) read(msg *message) {
 }
 
 func main() {
-	internetPort := flag.Int("ter", 60000, "the port exports to the internet")
-	intranetPort := flag.Int("tra", 60001, "the port links to the intranet")
+	internetPort := flag.Int("ter", 60000, "the port exposed to the internet")
+	intranetPort := flag.Int("tra", 60001, "the port linked to the intranet")
 	flag.Parse()
 
 	t := New()

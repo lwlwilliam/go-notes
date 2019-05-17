@@ -57,7 +57,7 @@ func handler(server net.Conn, transitionPort int) {
 func main() {
 	host := flag.String("h", "127.0.0.1", "server address")
 	transitionPort := flag.Int("tp", 60001, "the port keeps link to the server")
-	exportPort := flag.Int("ep", 80, "the port provides service to the internet")
+	exposePort := flag.Int("ep", 80, "the port provides service to the internet")
 	flag.Parse()
 
 	server, err := net.Dial("tcp", fmt.Sprintf("%s:%d", *host, *transitionPort))
@@ -66,7 +66,7 @@ func main() {
 	}
 	log.Printf("connected to the server <%s> from <%s>", server.RemoteAddr(), server.LocalAddr())
 
-	go handler(server, *exportPort)
+	go handler(server, *exposePort)
 
 	select {}
 }
