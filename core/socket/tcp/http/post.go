@@ -1,3 +1,4 @@
+// post 模拟了浏览器的表单请求，分别是普通的 form 表单提交以及包含文件上传的表单提交
 package main
 
 import (
