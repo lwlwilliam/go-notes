@@ -1,136 +1,131 @@
 package main
 
 import (
-	"net"
-	"fmt"
 	"flag"
-	"os"
+	"fmt"
+	"net"
+	"log"
 )
 
-type MidServer struct {
-	// 客户端监听
-	clientLis *net.TCPListener
-	// 后端服务连接
-	transferLis *net.TCPListener
-	// 所有通道
-	channels map[int]*Channel
-	// 当前通道 id
-	curChannelID int
+type transition struct {
+	internet  *net.TCPListener
+	intranet  *net.TCPListener
+	messages  map[int]*message
+	messageID int
 }
 
-type Channel struct {
-	// 通道 id
-	id int
-	// 客户端连接
-	client net.Conn
-	// 后端服务连接
-	transfer net.Conn
-	// 客户端接收消息
-	clientRecvMsg chan []byte
-	// 后端服务发送消息
-	transferSendMsg chan []byte
+type message struct {
+	id          int
+	internet    net.Conn
+	intranet    net.Conn
+	internetMsg chan []byte
+	intranetMsg chan []byte
 }
 
-func New() *MidServer {
-	return &MidServer{
-		channels: make(map[int]*Channel),
-		curChannelID: 0,
+func New() *transition {
+	return &transition{
+		messages:  make(map[int]*message),
+		messageID: 0,
 	}
 }
 
-// 启动服务
-func (m *MidServer) Start(clientPort int, transferPort int) error {
-	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", clientPort))
+func (t *transition) listen(internetPort int, intranetPort int) error {
+	// listen for the internet
+	socket, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", internetPort))
+	log.Println("resolve the internet addr...")
 	if err != nil {
 		return err
 	}
-	m.clientLis, err = net.ListenTCP("tcp", addr)
-	if err != nil {
-		return err
-	}
-
-	addr, err = net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", transferPort))
-	if err != nil {
-		return err
-	}
-	m.transferLis, err = net.ListenTCP("tcp", addr)
+	t.internet, err = net.ListenTCP("tcp", socket)
+	log.Println("listen to the internet...")
 	if err != nil {
 		return err
 	}
 
-	go m.AcceptLoop()
+	// listen for the intranet
+	socket, err = net.ResolveTCPAddr("tcp", fmt.Sprintf(":%d", intranetPort))
+	log.Println("resolve the intranet addr...")
+	if err != nil {
+		return err
+	}
+	t.intranet, err = net.ListenTCP("tcp", socket)
+	log.Println("listen to the intranet...")
+	if err != nil {
+		return err
+	}
+
+	go t.accept()
 	return nil
 }
 
-func (m *MidServer) Stop() {
-	m.clientLis.Close()
-	m.transferLis.Close()
+func (t *transition) close() {
+	t.internet.Close()
+	t.intranet.Close()
 
-	// 循环关闭通道连接
-	for _, v := range m.channels {
-		v.client.Close()
-		v.transfer.Close()
+	for _, v := range t.messages {
+		v.internet.Close()
+		v.intranet.Close()
 	}
 }
 
-// 删除通道
-func (m *MidServer) DelChannel(id int) {
-	chs := m.channels
-	delete(chs, id)
-	m.channels = chs
+func (t *transition) delChannel(id int) {
+	msgs := t.messages
+	delete(msgs, id)
+	t.messages = msgs
 }
 
-// 处理连接
-func (m *MidServer) AcceptLoop() {
-	transfer, err := m.transferLis.Accept()
+func (t *transition) accept() {
+	// keep the link of intranet
+	intranet, err := t.intranet.Accept()
 	if err != nil {
+		log.Println("accept intranet error:", err)
 		return
 	}
+	log.Printf("accept from intranet <%s>", intranet.RemoteAddr())
 
+	// accept multi links from the internet
 	for {
-		client, err := m.clientLis.Accept()
+		conn, err := t.internet.Accept()
 		if err != nil {
+			log.Println("accept internet error:", err)
 			continue
 		}
+		log.Printf("accept from internet <%s>", conn.RemoteAddr())
 
-		// 创建通道
-		ch := &Channel{
-			id:m.curChannelID,
-			client:client,
-			transfer:transfer,
-			clientRecvMsg:make(chan []byte),
-			transferSendMsg:make(chan []byte),
+		msg := &message{
+			id:          t.messageID,
+			internet:    conn,
+			intranet:    intranet,
+			internetMsg: make(chan []byte),
+			intranetMsg: make(chan []byte),
 		}
-		m.curChannelID ++
+		t.messageID++
 
-		// 把通道放入 channels 中
-		chs := m.channels
-		chs[ch.id] = ch
-		m.channels = chs
+		msgs := t.messages
+		msgs[msg.id] = msg
+		t.messages = msgs
 
-		// 启动一个 goroutine 处理客户端消息
-		go m.ClientMsgLoop(ch)
-		// 启动一个 goroutine 处理后端服务消息
-		go m.TransferMsgLoop(ch)
+		go t.writeToIntranet(msg)
+		go t.writeToInternet(msg)
 
-		go m.MsgLoop(ch)
+		go t.read(msg)
 	}
 }
 
-// 处理客户端消息
-func (m *MidServer) ClientMsgLoop(ch *Channel) {
+// accept the messages from internet and write them to intranet
+func (t *transition) writeToIntranet(msg *message) {
 	defer func() {
-		fmt.Println("ClientMsgLoop exit")
+		fmt.Println("internetMsg exit")
 	}()
 
 	for {
 		select {
-		case data, isClose := <- ch.transferSendMsg:
+		case data, isClose := <-msg.internetMsg:
 			if !isClose {
 				return
 			}
 
-			_, err := ch.client.Write(data)
+			_, err := msg.intranet.Write(data)
 			if err != nil {
 				return
 			}
@@ -138,19 +133,20 @@ func (m *MidServer) ClientMsgLoop(ch *Channel) {
 	}
 }
 
-func (m *MidServer) TransferMsgLoop(ch *Channel) {
+// accept the messages from intranet and write them to internet
+func (t *transition) writeToInternet(msg *message) {
 	defer func() {
-		fmt.Println("TransferMsgLoop exit")
+		fmt.Println("intranetMsg exit")
 	}()
 
 	for {
 		select {
-		case data, isClose := <- ch.clientRecvMsg:
+		case data, isClose := <-msg.intranetMsg:
 			if !isClose {
 				return
 			}
 
-			_, err := ch.transfer.Write(data)
+			_, err := msg.internet.Write(data)
 			if err != nil {
 				return
 			}
@@ -158,42 +154,46 @@ func (m *MidServer) TransferMsgLoop(ch *Channel) {
 	}
 }
 
-func (m *MidServer) MsgLoop(ch *Channel) {
+func (t *transition) read(msg *message) {
 	defer func() {
-		// 关闭 channel, 好让 ClientMsgLoop 与 TransferMsgLoop 退出
-		close(ch.clientRecvMsg)
-		close(ch.transferSendMsg)
-		m.DelChannel(ch.id)
-		fmt.Println("MsgLoop exit")
+		close(msg.internetMsg)
+		close(msg.intranetMsg)
+		t.delChannel(msg.id)
+		fmt.Println("read exit")
 	}()
 
 	buf := make([]byte, 1024)
 	for {
-		n, err := ch.client.Read(buf)
+		n, err := msg.internet.Read(buf)
 		if err != nil {
+			log.Println("internet read error:", err)
 			return
 		}
-		ch.clientRecvMsg <- buf[:n]
-		n, err = ch.transfer.Read(buf)
+
+		log.Printf("%s", buf[:n])
+		msg.internetMsg <- buf[:n]
+		n, err = msg.intranet.Read(buf)
 		if err != nil {
+			log.Println("intranet read error:", err)
 			return
 		}
-		ch.transferSendMsg <- buf[:n]
+
+		log.Printf("%s", buf[:n])
+		msg.intranetMsg <- buf[:n]
 	}
 }
 
 func main() {
-	localPort := flag.Int("lp", 8080, "客户端访问端口")
-	remotePort := flag.Int("rp", 8888, "服务访问端口")
+	internetPort := flag.Int("ter", 60000, "the port exports to the internet")
+	intranetPort := flag.Int("tra", 60001, "the port links to the intranet")
 	flag.Parse()
-	if flag.NFlag() != 2 {
-		flag.PrintDefaults()
-		os.Exit(1)
+
+	t := New()
+
+	err := t.listen(*internetPort, *intranetPort)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	ms := New()
-	// 启动服务
-	ms.Start(*localPort, *remotePort)
-
-	select{}
+	select {}
 }
