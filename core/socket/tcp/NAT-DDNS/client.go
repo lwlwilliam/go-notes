@@ -5,6 +5,7 @@ import (
 	"net"
 	"fmt"
 	"log"
+//	"strings"
 )
 
 func handler(server net.Conn, transitionPort int) {
@@ -28,7 +29,12 @@ func handler(server net.Conn, transitionPort int) {
 
 		// write the request of the server to the local
 		log.Printf("write to local <%s>\n", local.RemoteAddr())
+
+		// 这里需要处理 HTTP 报文，因为请求的是服务器的地址，需要在转发给本地的服务的时候修改成本地地址。
+		// data := []byte(strings.Replace(string(buf[:n]), "*.*.*.*:60000", "localhost:80", -1))
 		data := buf[:n]
+
+		log.Printf("%s\n", data)
 		n, err = local.Write(data)
 		if err != nil {
 			log.Println("local write:", err)
