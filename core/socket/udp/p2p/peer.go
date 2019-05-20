@@ -9,23 +9,26 @@ import (
 	"strings"
 	"strconv"
 	"time"
+	"flag"
 )
-
-var tag string
 
 const HandShakeMsg = "udp hole message"
 
+var (
+	tag, ip string
+)
+
 func main() {
-	// process tag
-	tag = os.Args[1]
-	ip := os.Args[2]
+	tag = *flag.String("t", "mac", "the process tag")
+	ip = *flag.String("i", "", "the process tag")
+	flag.Parse()
 
 	if ip == "" {
 		log.Fatal("IP address can not be empty.")
 	}
 
 	srcAddr := &net.UDPAddr{IP: net.IPv4zero, Port: 9982}
-	dstAddr := &net.UDPAddr{IP: net.ParseIP(""), Port: 9981}
+	dstAddr := &net.UDPAddr{IP: net.ParseIP(ip), Port: 9981}
 	conn, err := net.DialUDP("udp", srcAddr, dstAddr)
 	if err != nil {
 		log.Fatal(err)
@@ -73,7 +76,7 @@ func bidirectionHole(srcAddr *net.UDPAddr, anotherAddr *net.UDPAddr) {
 
 	go func() {
 		for {
-			time.Sleep(10 * time.Second)
+			time.Sleep(1 * time.Second)
 			if _, err = conn.Write([]byte("from [" + tag + "]")); err != nil {
 				log.Println("send msg fail", err)
 			}
