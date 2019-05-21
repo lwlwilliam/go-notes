@@ -2,7 +2,6 @@
 package main
 
 import (
-	"os"
 	"net"
 	"log"
 	"fmt"
