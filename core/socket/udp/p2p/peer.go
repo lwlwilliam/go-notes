@@ -2,13 +2,13 @@
 package main
 
 import (
-	"net"
-	"log"
-	"fmt"
-	"strings"
-	"strconv"
-	"time"
 	"flag"
+	"fmt"
+	"log"
+	"net"
+	"strconv"
+	"strings"
+	"time"
 )
 
 const HandShakeMsg = "udp hole message"
@@ -26,7 +26,7 @@ func main() {
 		log.Fatal("IP address can not be empty.")
 	}
 
-	srcAddr := &net.UDPAddr{IP: net.IPv4zero, Port: 9982}
+	srcAddr := &net.UDPAddr{IP: net.IPv4zero, Port: 9983}
 	dstAddr := &net.UDPAddr{IP: net.ParseIP(*ip), Port: 9981}
 	conn, err := net.DialUDP("udp", srcAddr, dstAddr)
 	if err != nil {
@@ -55,8 +55,8 @@ func parseAddr(addr string) net.UDPAddr {
 	t := strings.Split(addr, ":")
 	port, _ := strconv.Atoi(t[1])
 	return net.UDPAddr{
-		IP: net.ParseIP(t[0]),
-		Port:port,
+		IP:   net.ParseIP(t[0]),
+		Port: port,
 	}
 }
 
@@ -73,11 +73,16 @@ func bidirectionHole(srcAddr *net.UDPAddr, anotherAddr *net.UDPAddr) {
 		log.Println("send handshake:", err)
 	}
 
+	log.Println("dial successfully:", conn.RemoteAddr())
+
 	go func() {
 		for {
-			time.Sleep(1 * time.Second)
+			time.Sleep(10 * time.Second)
+			log.Println("write at", conn.LocalAddr())
 			if _, err = conn.Write([]byte("from [" + *tag + "]")); err != nil {
 				log.Println("send msg fail", err)
+			} else {
+				log.Println("send msg successfully to:", conn.RemoteAddr())
 			}
 		}
 	}()
@@ -85,10 +90,11 @@ func bidirectionHole(srcAddr *net.UDPAddr, anotherAddr *net.UDPAddr) {
 	for {
 		data := make([]byte, 1024)
 		n, _, err := conn.ReadFromUDP(data)
+		log.Println("read at", conn.LocalAddr())
 		if err != nil {
 			log.Printf("error during read: %s\n", err)
 		} else {
-			log.Printf("received: %s\n", data[:n])
+			log.Printf("received from %s: %s\n", conn.RemoteAddr(), data[:n])
 		}
 	}
 }
