@@ -14,26 +14,26 @@ import (
 const HandShakeMsg = "udp hole message"
 
 var (
-	tag, ip string
+	tag, ip *string
 )
 
 func main() {
-	tag = *flag.String("t", "mac", "the process tag")
-	ip = *flag.String("i", "", "the process tag")
+	tag = flag.String("t", "mac", "the process tag")
+	ip = flag.String("i", "", "the server ip")
 	flag.Parse()
 
-	if ip == "" {
+	if *ip == "" {
 		log.Fatal("IP address can not be empty.")
 	}
 
 	srcAddr := &net.UDPAddr{IP: net.IPv4zero, Port: 9982}
-	dstAddr := &net.UDPAddr{IP: net.ParseIP(ip), Port: 9981}
+	dstAddr := &net.UDPAddr{IP: net.ParseIP(*ip), Port: 9981}
 	conn, err := net.DialUDP("udp", srcAddr, dstAddr)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if _, err = conn.Write([]byte("Hello, I'm new peer:" + tag)); err != nil {
+	if _, err = conn.Write([]byte("Hello, I'm new peer:" + *tag)); err != nil {
 		log.Fatal(err)
 	}
 
@@ -76,7 +76,7 @@ func bidirectionHole(srcAddr *net.UDPAddr, anotherAddr *net.UDPAddr) {
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
-			if _, err = conn.Write([]byte("from [" + tag + "]")); err != nil {
+			if _, err = conn.Write([]byte("from [" + *tag + "]")); err != nil {
 				log.Println("send msg fail", err)
 			}
 		}
