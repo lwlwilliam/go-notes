@@ -8,8 +8,10 @@ import (
 	"net"
 	"os"
 	"time"
+	"log"
 )
 
+// icmp 报文格式
 type ICMP struct {
 	Type        uint8
 	Code        uint8
@@ -29,7 +31,9 @@ Usage:
 	os.Exit(0)
 }
 
+// seq 是序号，Sequence number
 func getICMP(seq uint16) ICMP {
+	// 这个就是 icmp 的报文内容了
 	icmp := ICMP{
 		Type:        8,
 		Code:        0,
@@ -38,10 +42,15 @@ func getICMP(seq uint16) ICMP {
 		SequenceNum: seq,
 	}
 
+	log.Println("icmp before:", icmp)
+
 	var buffer bytes.Buffer
+	// 注意大小端问题
 	binary.Write(&buffer, binary.BigEndian, icmp)
 	icmp.CheckSum = CheckSum(buffer.Bytes())
 	buffer.Reset()
+
+	log.Println("icmp after:", icmp)
 
 	return icmp
 }
@@ -49,8 +58,7 @@ func getICMP(seq uint16) ICMP {
 func sendICMPRequest(icmp ICMP, destAddr *net.IPAddr) error {
 	conn, err := net.DialIP("ip4:icmp", nil, destAddr)
 	if err != nil {
-		fmt.Printf("Fail to connect to remote host: %s\n", err)
-		return err
+		log.Fatalf("Fail to connect to remote host: %s\n", err)
 	}
 	defer conn.Close()
 
@@ -88,20 +96,20 @@ func main() {
 	host := os.Args[1]
 	raddr, err := net.ResolveIPAddr("ip", host)
 	if err != nil {
-		fmt.Printf("Fail to resolve %s, %s\n", host, err)
-		return
+		log.Fatalf("Fail to resolve %s, %s\n", host, err)
 	}
 
 	fmt.Printf("Ping %s (%s):\n\n", raddr.String(), host)
 
 	for i := 1; i < 6; i++ {
 		if err = sendICMPRequest(getICMP(uint16(i)), raddr); err != nil {
-			fmt.Printf("Error: %s\n", err)
+			log.Fatalf("Error: %s\n", err)
 		}
 		time.Sleep(2 * time.Second)
 	}
 }
 
+// 检验和
 func CheckSum(data []byte) uint16 {
 	var (
 		sum    uint32
