@@ -18,7 +18,6 @@ import (
 	"net/url"
 	"strings"
 	"strconv"
-	"time"
 )
 
 func main() {
