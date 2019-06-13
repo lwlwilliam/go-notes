@@ -95,6 +95,11 @@ func requestHandler(request net.Conn) {
 	// 获取请求方法和主机
 	var method, host, address string
 	end := bytes.IndexByte(buff.Bytes()[:requestLen], '\n')
+	if end < 0 {
+		log.Println("Bad request:")
+		log.Println(string(buff.Bytes()))
+		return
+	}
 	fmt.Sscanf(string(buff.Bytes()[:end]), "%s%s", &method, &host)
 	hostPortURL, err := url.Parse(host)
 	if err != nil {
