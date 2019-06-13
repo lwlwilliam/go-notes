@@ -22,7 +22,7 @@ import (
 
 func main() {
 	// 监听 tcp 60000 端口
-	socket, err := net.Listen("tcp", ":60000")
+	socket, err := net.Listen("tcp", "127.0.0.1:60000")
 	fatalError(err)
 
 	log.Println("Running...")
@@ -130,7 +130,7 @@ func requestHandler(request net.Conn) {
 	}
 
 	// 打印请求报文
-	fmt.Printf("%s", buf[:requestLen])
+	fmt.Printf("%s", buff.Bytes()[:requestLen])
 
 	// 创建隧道
 	if method == "CONNECT" {
