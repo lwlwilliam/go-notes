@@ -71,11 +71,12 @@ func requestHandler(request net.Conn) {
 		headers := bytes.Split(buff.Bytes(), []byte("\r\n"))
 		for _, v := range headers {
 			if bytes.Index(v, []byte("Content-Length:")) == 0 {
+				log.Println("v:", v)
 				contentLen, err = strconv.Atoi(fmt.Sprintf("%d", bytes.TrimSpace(bytes.Split(v, []byte(":"))[1])))
 				if err != nil {
 					log.Fatal(err)
 				}
-				break
+				continue
 			}
 		}
 
