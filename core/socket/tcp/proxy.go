@@ -136,7 +136,7 @@ func requestHandler(request net.Conn) {
 	if method == "CONNECT" {
 		fmt.Fprintf(request, "HTTP/1.1 200 Connection established\r\n\r\n")
 	} else {
-		server.Write(buf[:requestLen])
+		server.Write(buff.Bytes()[:requestLen])
 	}
 
 	// 进行转发
