@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"strconv"
 )
 
 func main() {
@@ -31,7 +32,8 @@ func main() {
 		request, err := socket.Accept()
 		fatalError(err)
 
-		log.Println(request.RemoteAddr())
+		log.Println("Local address:", request.LocalAddr())
+		log.Println("Client address:", request.RemoteAddr())
 
 		// 处理请求
 		go requestHandler(request)
@@ -42,28 +44,65 @@ func requestHandler(request net.Conn) {
 	if request == nil {
 		return
 	}
-
 	defer request.Close()
 
 	// 获取请求内容
-	var buf = make([]byte, 1024)
-	n, err := request.Read(buf[:])
-	if err != nil {
-		log.Println("Read request:", err)
-		return
+	buf := make([]byte, 1024)
+	buff := bytes.NewBuffer(nil)
+	requestLen := 0
+	contentLen := 0
+	for {
+		n, err := request.Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				requestLen += n
+				break
+			}
+
+			log.Println("Read request err:", err)
+			return
+		}
+
+		buff.Write(buf[:n])
+		requestLen += n
+
+		// 获取实体长度
+		headers := bytes.Split(buff.Bytes(), []byte("\r\n"))
+		for _, v := range headers {
+			if bytes.Index(v, []byte("Content-Length:")) == 0 {
+				contentLen, err = strconv.Atoi(fmt.Sprintf("%d", bytes.TrimSpace(bytes.Split(v, []byte(":"))[1])))
+				if err != nil {
+					log.Fatal(err)
+				}
+				break
+			}
+		}
+
+		// 确定实体长度
+		if headerEnd := bytes.Index(buff.Bytes(), []byte("\r\n\r\n")); headerEnd > -1 {
+			// 实体数据接收完成
+			if contentLen == buff.Len() - headerEnd - 4 {
+				break
+			} else if contentLen < buff.Len() - headerEnd - 4 {
+				log.Println("Bad request: Content-Length, ", contentLen, "; Transfer Length, ", buff.Len() - headerEnd)
+				return
+			}
+		}
 	}
 
-	var method, host, address string
+	log.Println(buff.Len(), requestLen)
 
 	// 获取请求方法和主机
-	fmt.Sscanf(string(buf[:bytes.IndexByte(buf[:], '\n')]), "%s%s", &method, &host)
+	var method, host, address string
+	end := bytes.IndexByte(buff.Bytes()[:requestLen], '\n')
+	fmt.Sscanf(string(buff.Bytes()[:end]), "%s%s", &method, &host)
 	hostPortURL, err := url.Parse(host)
 	if err != nil {
-		log.Println("Parse host:", err)
+		log.Println("Parse url err:", err)
 		return
 	}
 
-	// 确定端口
+	// address = host + port
 	if hostPortURL.Opaque == "443" {
 		address = hostPortURL.Scheme + ":443"
 	} else {
@@ -75,20 +114,23 @@ func requestHandler(request net.Conn) {
 	}
 
 	// 记录请求 socket
-	log.Println("Attempt to request:", address)
+	log.Println("Address the client requests:", address)
 
-	// 到目标服务器的 socket
+	// 连接目标服务器
 	server, err := net.Dial("tcp", address)
 	if err != nil {
-		log.Println("Create socket to target server:", err)
+		log.Println("Create socket to target server err:", err)
 		return
 	}
+
+	// 打印请求报文
+	fmt.Printf("%s", buf[:requestLen])
 
 	// 创建隧道
 	if method == "CONNECT" {
 		fmt.Fprintf(request, "HTTP/1.1 200 Connection established\r\n\r\n")
 	} else {
-		server.Write(buf[:n])
+		server.Write(buf[:requestLen])
 	}
 
 	// 进行转发
