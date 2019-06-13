@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"strings"
 	"strconv"
+	"time"
 )
 
 func main() {
@@ -51,7 +52,9 @@ func requestHandler(request net.Conn) {
 	buff := bytes.NewBuffer(nil)
 	requestLen := 0
 	contentLen := 0
+
 	for {
+		request.SetReadDeadline(time.Now().Add(5 * time.Second))
 		n, err := request.Read(buf)
 		if err != nil {
 			if err == io.EOF {
@@ -60,7 +63,7 @@ func requestHandler(request net.Conn) {
 			}
 
 			log.Println("Read request err:", err)
-			return
+			continue
 		}
 
 		buff.Write(buf[:n])
@@ -85,7 +88,7 @@ func requestHandler(request net.Conn) {
 				break
 			} else if contentLen < buff.Len() - headerEnd - 4 {
 				log.Println("Bad request: Content-Length, ", contentLen, "; Transfer Length, ", buff.Len() - headerEnd)
-				return
+				continue
 			}
 		}
 	}
