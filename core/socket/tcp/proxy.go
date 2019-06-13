@@ -54,7 +54,6 @@ func requestHandler(request net.Conn) {
 	contentLen := 0
 
 	for {
-		request.SetReadDeadline(time.Now().Add(5 * time.Second))
 		n, err := request.Read(buf)
 		if err != nil {
 			if err == io.EOF {
