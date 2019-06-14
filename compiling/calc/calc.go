@@ -2,9 +2,9 @@
 package calc
 
 import (
-	"github.com/lwlwilliam/go/compiling/calc/eval"
-	lexer2 "github.com/lwlwilliam/go/compiling/calc/lexer"
-	parser2 "github.com/lwlwilliam/go/compiling/calc/parser"
+	"github.com/lwlwilliam/go-notes/compiling/calc/eval"
+	lexer2 "github.com/lwlwilliam/go-notes/compiling/calc/lexer"
+	parser2 "github.com/lwlwilliam/go-notes/compiling/calc/parser"
 )
 
 func Calc(input string) int64 {

@@ -1,6 +1,6 @@
 package eval
 
-import "github.com/lwlwilliam/go/compiling/calc/ast"
+import "github.com/lwlwilliam/go-notes/compiling/calc/ast"
 
 func Eval(exp ast.Expression) int64 {
 	switch node := exp.(type) {

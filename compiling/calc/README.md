@@ -7,7 +7,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/lwlwilliam/go/compiling/calc"
+	"github.com/lwlwilliam/go-notes/compiling/calc"
 )
 
 func main() {

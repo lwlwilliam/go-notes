@@ -3,8 +3,8 @@ package parser
 
 import (
 	"fmt"
-	"github.com/lwlwilliam/go/compiling/calc/ast"
-	"github.com/lwlwilliam/go/compiling/calc/lexer"
+	"github.com/lwlwilliam/go-notes/compiling/calc/ast"
+	"github.com/lwlwilliam/go-notes/compiling/calc/lexer"
 	"strconv"
 )
 

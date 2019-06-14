@@ -7,7 +7,7 @@ package ast
 
 import (
 	"bytes"
-	"github.com/lwlwilliam/go/compiling/calc/lexer"
+	"github.com/lwlwilliam/go-notes/compiling/calc/lexer"
 )
 
 // 表达式
