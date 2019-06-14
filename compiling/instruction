@@ -1,0 +1,6 @@
+MOV x 10
+MOV y 30
+ADD x y
+MUT x y
+OUT x
+OUT y
