@@ -68,7 +68,6 @@ func Send(DNSServer, domain string) ([]byte, int, time.Duration) {
 	defer conn.Close()
 
 	domainB := ParseDomainName(domain)
-	fmt.Println(len(domainB), domainB)
 	binary.Write(&buffer, binary.BigEndian, requestHeader)
 	binary.Write(&buffer, binary.BigEndian, domainB)
 	binary.Write(&buffer, binary.BigEndian, requestQueries)
@@ -85,17 +84,37 @@ func Send(DNSServer, domain string) ([]byte, int, time.Duration) {
 }
 func main() {
 	remsg, n, _ := Send("8.8.8.8:53", "www.baidu.com")
+	resp := remsg[:n]
 	fmt.Println("responseLen:  ", n)
 
 	// Header
-	fmt.Printf("ID:%#18x\n", remsg[:2])            // ID
-	fmt.Printf("Flags:%#15x\n", remsg[2:4])        // Flags
-	fmt.Printf("Questions:%#11x\n", remsg[4:6])    // Questions
-	fmt.Printf("AnswerRRs:%#11x\n", remsg[6:8])    // AnswerRRs
-	fmt.Printf("AuthorityRRs:%#8x\n", remsg[8:10]) // AuthorityRRs
-	fmt.Printf("AdditionRRs:%#9x\n", remsg[10:12]) // AdditionRRs
+	fmt.Printf("ID:%#18x\n", resp[:2])            // ID
+	fmt.Printf("Flags:%#15x\n", resp[2:4])        // Flags
+	fmt.Printf("Questions:%#11x\n", resp[4:6])    // Questions
+	fmt.Printf("AnswerRRs:%#11x\n", resp[6:8])    // AnswerRRs
+	fmt.Printf("AuthorityRRs:%#8x\n", resp[8:10]) // AuthorityRRs
+	fmt.Printf("AdditionRRs:%#9x\n", resp[10:12]) // AdditionRRs
 
-	fmt.Println(remsg[12:27]) // Queries
+	// Queries
+	fmt.Printf("QueriesName:")
+	name := resp[12:27]
+	l := len(name)
+	for i := 0; i < l - 1; i ++ {
+		segLen := int(name[i])
+		curI := i
+		for i < curI + segLen {
+			if i == 0 {
+				fmt.Printf("%4c", name[i + 1])
+			} else {
+				fmt.Printf("%c", name[i + 1])
+			}
+			i ++
+		}
+		fmt.Print(".")
+	}
+	fmt.Printf("\n")
+	fmt.Printf("QueriesType:%#9x\n", resp[27:29])
+	fmt.Printf("QueriesClass:%#8x\n", resp[29:31])
 
-	fmt.Println(remsg[27:]) // RRs
+	fmt.Println(resp[31:]) // RRs
 }
