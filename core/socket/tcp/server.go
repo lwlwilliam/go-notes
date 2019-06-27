@@ -1,38 +1,33 @@
-// go tcpsocket server
+// 与 client2.go 配合使用
+// 服务器很忙，瞬间有大量 client 端连接尝试向 server 建立，server 端的 listen backlog 队列满，server accept 不及时
+// ，这将导致 client 端 Dial 阻塞
 package main
 
 import (
 	"net"
-	"fmt"
+	"log"
+	"time"
 )
-
-func handleConn(c net.Conn)  {
-	c.Write([]byte("Received"))
-	defer c.Close()
-
-	//for {
-		// read from the connection
-		// ... ...
-		// write to the connection
-		// ... ...
-	//}
-}
 
 func main()  {
 	l, err := net.Listen("tcp", "localhost:8888")
 	if err != nil {
-		fmt.Println("listen error:", err)
+		log.Println("error listen:", err)
 		return
 	}
+	defer l.Close()
+	log.Println("listen ok")
 
+	var i int
 	for {
-		c, err := l.Accept()
+		// 每 10 秒接收一个连接
+		time.Sleep(time.Second * 10)
+		conn, err := l.Accept()
 		if err != nil {
-			fmt.Println("accept error:", err)
+			log.Println("accept error:", err)
 			break
 		}
-		// start a new goroutine to handle
-		// the new connection.
-		go handleConn(c)
+		i ++
+		log.Printf("%d: accept a new connection from %v\n", i, conn.RemoteAddr())
 	}
 }
