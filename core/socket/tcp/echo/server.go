@@ -18,7 +18,7 @@ func main() {
 	flag.Parse()
 	var l net.Listener
 	var err error
-	l, err = net.Listen("tcp", *host + ":" + *port)
+	l, err = net.Listen("tcp", *host+":"+*port)
 	if err != nil {
 		fmt.Println("Error listening:", err)
 		os.Exit(1)

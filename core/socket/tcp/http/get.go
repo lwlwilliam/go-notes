@@ -58,13 +58,13 @@ func readChunk(conn *net.Conn) {
 		n, err := (*conn).Read(buf)
 		if err != nil {
 			log.Println(err)
-			if err == io.EOF {
-				fmt.Print(string(buf[:n]))
+			if err == io.EOF && n != 0 {
+				fmt.Printf("%s", buf[:n])
 			}
 
 			break
 		}
-		fmt.Print(string(buf[:n]))
+		fmt.Printf("%s", buf[:n])
 	}
 }
 

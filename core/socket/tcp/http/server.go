@@ -7,13 +7,15 @@ import (
 )
 
 // HTTP 响应报文，行分隔符为 \r\n
-var content = []byte("HTTP/1.1 200 OK\r\nContent-type:text/plain\r\n\r\nHello world!")
+// TODO: 确定一下是否 200 报文要 Content-Length 头
+var content = []byte("HTTP/1.1 200 OK\r\nContent-type:text/plain\r\nContent-Length: 12\r\n\r\nHello world!")
+//var content = []byte("HTTP/1.1 302 Moved Temporarily\r\nLocation: http://example.com")
 
 func handleConn(conn *net.Conn) {
-	// TODO:这里发现一定要把连接里的数据都读出来才能正常写入
-	var buf = make([]byte, 1) // buf 要确保所有数据都读出来了，最好循环读到 EOF
-	_, err := (*conn).Read(buf)
-	checkErr(err)
+	// TODO: 这里发现一定要把连接里的数据都读出来才能正常写入
+	//var buf = make([]byte, 1) // buf 要确保所有数据都读出来了，最好循环读到 EOF
+	//_, err := (*conn).Read(buf)
+	//checkErr(err)
 
 	n, err := (*conn).Write(content)
 	defer (*conn).Close()
@@ -28,7 +30,7 @@ func handleConn(conn *net.Conn) {
 func main() {
 	addr := "localhost:10000"
 	listener, err := net.Listen("tcp", addr)
-	log.Println("listening...")
+	log.Printf("listening %s...", addr)
 	checkErr(err)
 	defer listener.Close()
 

@@ -8,11 +8,12 @@ import (
 	"net"
 	"os"
 	"time"
+	"log"
 )
 
 func main() {
 	// 创建 tcp 地址
-	service := ":6666"
+	service := ":10000"
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 	checkError(err)
 
@@ -22,10 +23,12 @@ func main() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			log.Println(err)
 			continue
 		}
+
 		daytime := time.Now().String()
-		daytime = "HTTP/1.1 200 OK\r\nLocation: https://github.com"
+		daytime = "HTTP/1.1 302 Moved Temporarily\r\nLocation: https://github.com\r\n\r\n"
 		conn.Write([]byte(daytime))
 		conn.Close()
 	}
