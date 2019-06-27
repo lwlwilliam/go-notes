@@ -2,20 +2,20 @@
 package main
 
 import (
-	"flag"
-	"net"
-	"log"
 	"bytes"
+	"flag"
 	"fmt"
-	"strconv"
 	"io"
-	"os"
 	"io/ioutil"
+	"log"
+	"net"
+	"os"
+	"strconv"
 )
 
 var (
 	hostname *string
-	port *string
+	port     *string
 )
 
 func main() {
@@ -30,7 +30,6 @@ func main() {
 	}
 	defer conn.Close()
 
-
 	// x-www-form-urlencoded
 	//body := "name=William A&hobby=running"
 	//requestMsg := bytes.NewBuffer(nil)
@@ -39,7 +38,6 @@ func main() {
 	//requestMsg.WriteString("Content-Type: application/x-www-form-urlencoded\r\n")
 	//requestMsg.WriteString("Content-Length: " + strconv.Itoa(len(body)) + "\r\n\r\n")
 	//requestMsg.WriteString(body)
-
 
 	// multipart/form-data 模拟浏览器以 <form action="" enctype="multipart/form-data"></form> 形式提交表单（上传文件）
 	customizedBoundary := "customizedBoundary"
@@ -68,7 +66,6 @@ func main() {
 	requestMsg.WriteString("Content-Type: multipart/form-data;boundary=" + customizedBoundary + "\r\n")
 	requestMsg.WriteString("Content-Length: " + strconv.Itoa(len(body)) + "\r\n\r\n")
 	requestMsg.WriteString(body)
-
 
 	fmt.Println("##################################")
 	fmt.Println("request")
