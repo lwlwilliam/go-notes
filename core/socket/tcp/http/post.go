@@ -19,6 +19,24 @@ var (
 )
 
 func main() {
+	conn := dial()
+
+	// request
+	t := 2
+	switch t {
+	case 1:
+		urlencoded(conn)
+	case 2:
+		multipart(conn)
+	default:
+		urlencoded(conn)
+	}
+
+	// response
+	resp(conn)
+}
+
+func dial() *net.Conn {
 	hostname = flag.String("h", "127.0.0.1", "hostname")
 	port = flag.String("p", "80", "port")
 	flag.Parse()
@@ -28,19 +46,50 @@ func main() {
 	if err != nil {
 		log.Fatalf("dial: %v", err)
 	}
-	defer conn.Close()
 
-	// x-www-form-urlencoded
-	//body := "name=William A&hobby=running"
-	//requestMsg := bytes.NewBuffer(nil)
-	//requestMsg.WriteString("POST /test/web/php/test.php HTTP/1.1\r\n")
-	//requestMsg.WriteString("Host: 127.0.0.1\r\n")
-	//requestMsg.WriteString("Content-Type: application/x-www-form-urlencoded\r\n")
-	//requestMsg.WriteString("Content-Length: " + strconv.Itoa(len(body)) + "\r\n\r\n")
-	//requestMsg.WriteString(body)
+	return &conn
+}
 
-	// multipart/form-data 模拟浏览器以 <form action="" enctype="multipart/form-data"></form> 形式提交表单（上传文件）
+func resp(conn *net.Conn) {
+	buf := make([]byte, 100)
+	for {
+		n, err := (*conn).Read(buf)
+		if err != nil {
+			if err == io.EOF {
+				fmt.Printf("%s", buf[:n])
+			}
+
+			log.Println(err)
+			break
+		}
+		fmt.Printf("%s", buf[:n])
+	}
+}
+
+// x-www-form-urlencoded 方式 post 提交
+func urlencoded(conn *net.Conn)  {
+	//x-www-form-urlencoded
+	body := "name=William A&hobby=running"
+	requestMsg := bytes.NewBuffer(nil)
+	requestMsg.WriteString("POST /test/web/php/test.php HTTP/1.1\r\n")
+	requestMsg.WriteString("Host: 127.0.0.1\r\n")
+	requestMsg.WriteString("Content-Type: application/x-www-form-urlencoded\r\n")
+	requestMsg.WriteString("Content-Length: " + strconv.Itoa(len(body)) + "\r\n")
+	requestMsg.WriteString("\r\n")
+	requestMsg.WriteString(body)
+
+	_, err := (*conn).Write(requestMsg.Bytes())
+	if err != nil {
+		log.Fatalf("write: %v", err)
+	}
+}
+
+// multipart/form-data 模拟浏览器以 <form action="" enctype="multipart/form-data"></form> 形式提交表单（上传文件）
+func multipart(conn *net.Conn)  {
+	// body 边界
 	customizedBoundary := "customizedBoundary"
+
+	// 准备要上传的文件
 	fd, err := os.Open("test.png")
 	if err != nil {
 		log.Fatal(err)
@@ -49,6 +98,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// 构造 body
 	body := "--" + customizedBoundary + "\r\n" +
 		"Content-Disposition: form-data; name=name\r\n\r\n" +
 		"William A\r\n" +
@@ -60,11 +111,13 @@ func main() {
 		"Content-Type: image/png\r\n\r\n" +
 		string(content) + "\r\n" +
 		"--" + customizedBoundary
+
 	requestMsg := bytes.NewBuffer(nil)
 	requestMsg.WriteString("POST /test/web/php/test.php HTTP/1.1\r\n")
 	requestMsg.WriteString("Host: 127.0.0.1\r\n")
 	requestMsg.WriteString("Content-Type: multipart/form-data;boundary=" + customizedBoundary + "\r\n")
-	requestMsg.WriteString("Content-Length: " + strconv.Itoa(len(body)) + "\r\n\r\n")
+	requestMsg.WriteString("Content-Length: " + strconv.Itoa(len(body)) + "\r\n")
+	requestMsg.WriteString("\r\n")
 	requestMsg.WriteString(body)
 
 	fmt.Println("##################################")
@@ -79,23 +132,8 @@ func main() {
 	fmt.Println("##################################")
 	fmt.Printf("\n\n")
 
-	_, err = conn.Write(requestMsg.Bytes())
+	_, err = (*conn).Write(requestMsg.Bytes())
 	if err != nil {
 		log.Fatalf("write: %v", err)
-	}
-
-	buf := make([]byte, 1024)
-
-	for {
-		n, err := conn.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				fmt.Printf("%s", buf[:n])
-			}
-
-			log.Println(err, ":", n)
-			break
-		}
-		fmt.Printf("%s", buf[:n])
 	}
 }
