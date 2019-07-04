@@ -12,10 +12,54 @@ import (
 	"os"
 	"bytes"
 	"io/ioutil"
+	"strconv"
+	"sync"
 )
 
 func main() {
-	request(1)
+	//request(1)
+	requestLAN()
+}
+
+func requestLAN() {
+	network := "192.168.11."
+	var host uint32 = 1
+	port := "80"
+	var wg sync.WaitGroup
+
+	for host < 255 {
+		wg.Add(1)
+		go func(host int) {
+			defer wg.Done()
+			addr := network + strconv.Itoa(int(host)) + ":" + port
+
+			conn, err := net.Dial("tcp", addr)
+			if err != nil {
+				log.Println(addr, " dial error:", err)
+				return
+			} else {
+				defer conn.Close()
+			}
+
+			_, err = conn.Write([]byte("GET / HTTP/1.1\r\nHost: " + conn.RemoteAddr().String() + "\r\n\r\n"))
+			if err != nil {
+				log.Println(conn.RemoteAddr(), " write error:", err)
+				return
+			}
+
+			result, err := ioutil.ReadAll(conn)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			fmt.Printf("#################################%s\n%s\n", conn.RemoteAddr(), result)
+		}(int(host))
+
+		host ++
+	}
+
+	wg.Wait()
 }
 
 func request(t uint) {

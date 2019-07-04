@@ -39,21 +39,22 @@ func startServerMode() {
 
 	// initialize manager and start the manager goroutine
 	manager := ClientManager{
-		clients: make(map[*Client]bool),
-		broadcast: make(chan []byte),
-		register: make(chan *Client),
+		clients:    make(map[*Client]bool),
+		broadcast:  make(chan []byte),
+		register:   make(chan *Client),
 		unregister: make(chan *Client),
 	}
 	go manager.start()
 
 	// do a continuous loop listening for connections
 	for {
-		// If a connection is accepted, it will be registered
-		// and prepared for sending and receiving of data.
 		connection, _ := listener.Accept()
 		if error != nil {
 			fmt.Println(error)
+			continue
 		}
+
+		// register the client and ready for receive from or send to it.
 		client := &Client{socket: connection, data: make(chan []byte)}
 		manager.register <- client
 		go manager.receiver(client)
@@ -63,7 +64,7 @@ func startServerMode() {
 
 func startClientMode() {
 	fmt.Println("Starting client...")
-	connection, error := net.Dial(PROTOCOL, HOST + ":" + PORT)
+	connection, error := net.Dial(PROTOCOL, HOST+":"+PORT)
 	if error != nil {
 		fmt.Println(error)
 	}
@@ -95,6 +96,7 @@ func (manager *ClientManager) start() {
 		case connection := <-manager.register:
 			manager.clients[connection] = true
 			fmt.Println("Added new connection!")
+
 		// If the unregister channel has data and that data which represents a connection,
 		// exists in our managed clients map, then the data channel for that connection will be closed
 		// and the connection will be removed from the list.
@@ -104,6 +106,7 @@ func (manager *ClientManager) start() {
 				delete(manager.clients, connection)
 				fmt.Println("A connection has terminated!")
 			}
+
 		// If the broadcast channel has data it means we've received a message. This message should be sent to
 		// every connection we're watching so this is done by looping through the available connections.
 		case message := <-manager.broadcast:
