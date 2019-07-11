@@ -12,16 +12,16 @@ func Echo(ws *websocket.Conn) {
 	var err error
 
 	for {
-		//var reply string
-		//
-		//if err = websocket.Message.Receive(ws, &reply); err != nil {
-		//	fmt.Println("Can't receive")
-		//	break
-		//}
-		//
-		//fmt.Println("Received back from client: " + reply)
-		//
-		//msg := "Received: " + reply
+		// receive
+		var reply string
+		if err = websocket.Message.Receive(ws, &reply); err != nil {
+			fmt.Println("Can't receive")
+			break
+		}
+		fmt.Println("Received back from client: " + reply)
+
+
+		// send
 		msg := "Hello world"
 		fmt.Println("Sending to client: " + msg)
 
