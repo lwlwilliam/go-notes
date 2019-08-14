@@ -5,7 +5,7 @@ import (
 	"golang.org/x/net/websocket"
 	"os"
 	"flag"
-	"github.com/lwlwilliam/go-notes/core/socket/tcp/webSocket/codec/xmlcodec"
+	"github.com/lwlwilliam/go-notes/socket/tcp/webSocket/codec/xmlcodec"
 )
 
 type Person struct {
