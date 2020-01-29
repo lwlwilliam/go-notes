@@ -4,7 +4,7 @@ import (
 	stdRand "math/rand"
 	"fmt"
 	"time"
-	cusRand "github.com/lwlwilliam/go/translations/yourbasic.org/Nutshells/src/math/rand"
+	cusRand "github.com/lwlwilliam/go-notes/translations/yourbasic.org/Nutshells/src/math/rand"
 )
 
 func main() {

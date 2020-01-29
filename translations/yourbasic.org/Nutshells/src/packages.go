@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
-	"github.com/lwlwilliam/go/translations/yourbasic.org/Object-oriented_programming/src/timer"
+	"github.com/lwlwilliam/go-notes/translations/yourbasic.org/Object-oriented_programming/src/timer"
 )
 
 func main() {
