@@ -1,4 +1,5 @@
-// GLOBL 命令用于将符号导出，以供其他代码引用
+// GLOBL 命令用于将符号（变量）导出，以供其他代码引用
+// GLOBL 语法：GLOBL symbobl(SB),width，symbol 对汇编中符号的名字，width 为符号对应内存大小
 GLOBL ·Id(SB),$8
 // DATA 命令用于初始化包变量，语法：DATA symbol+offset(SB)/width, value
 // symbol 为变量在汇编语言中对应的标识符，offset 是符号开始地址的偏移量，width 是要初始化内存的宽度大小，value 是要初始化的值。
