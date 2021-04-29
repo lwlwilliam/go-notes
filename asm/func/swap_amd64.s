@@ -1,0 +1,2 @@
+TEXT ·Swap(SB), NOSPLIT, $0-32
+TEXT ·SWap(SB), NOSPLIT, $0
